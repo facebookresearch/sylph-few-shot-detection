@@ -1,4 +1,29 @@
 # Few shot detection
+## Install packages
+Install virtualenv if its not installed yet.
+```
+python3 -m pip install --user virtualenv
+```
+Create
+```
+python3 -m venv env
+```
+Activate
+```
+source env/bin/activate
+```
+
+Install dependencies:
+```
+pip3 install -r requirements.txt --find-links https://download.pytorch.org/whl/nightly/cu102/torch_nightly.html
+```
+
+Install d2go separately. Follow the instruction here: https://github.com/facebookresearch/d2go/blob/main/README.md.
+
+
+
+
+
 # META_ARCHITECTURE
 name: `MetaOneStageDetector`
 specify function to build backbone: `build_fcos_resnet_fpn_backbone`
@@ -27,6 +52,10 @@ Under folder  `sylph/tools`. Run `run.py`. Main change includes: `--config-file`
 Pretraining
 ```
 ./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml"     --entitlement ar_rp_vll     --name "coco_pretraining"     --nodes 1 --num-gpus 8   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar     --canary --async-val --runner "sylph.runner.MetaFCOSRunner"
+```
+
+```
+python3 train_net.py --runner sylph.runner.MetaFCOSRunner \\n  --config "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml" --num-processes 3 \\n  --output-dir output/meta-fcos/coco/meta-train/WS_iFSD_imagenet1000x100gt 
 ```
 
 Meta-learning

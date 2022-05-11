@@ -9,7 +9,7 @@ import logging
 
 import detectron2.utils.comm as comm
 import torch
-from classy_vision.fb.generic.util import initialize_logger
+# from classy_vision.fb.generic.util import initialize_logger
 from d2go.distributed import launch
 from d2go.setup import (
     basic_argument_parser,
@@ -106,5 +106,5 @@ def cli():
 
 
 if __name__ == "__main__":
-    initialize_logger()
+    # initialize_logger()
     cli()
