@@ -1,0 +1,73 @@
+_BASE_: "Base-RCNN-FPN.yaml" # ensure the pretraining is the same as previous training
+MODEL:
+  WEIGHTS: "manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test/20210817113753/e2e_train/model_final.pth" #"detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  # WEIGHTS: "manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test/20210819231232/e2e_train/model_0014999.pth"
+  DDP_FIND_UNUSED_PARAMETERS: True
+  BACKBONE:
+    FREEZE: True
+  PROPOSAL_GENERATOR:
+    FREEZE: True
+  ROI_HEADS:
+    FREEZE: True
+  # meta-learning
+  META_LEARN:
+    EPISODIC_LEARNING: True
+    CLASS: 3 # define episodics, CLASS is computed from gpu setup
+    SHOT: 5 # training shot
+    EVAL_SHOT: 10
+    QUERY_SHOT: 1
+    CODE_GENERATOR:
+      NAME: "CodeGenerator"
+      USE_MASK: True
+      ALL_MASK: False
+      MASK_NORM: "GN"
+      # USE_BKG: True
+      # CODE_NORM: False
+      TOWER_LAYERS: [["GN", "ReLU"], ["GN", "ReLU"]] # Layers before the conditional conv, eg, [["GN", "ReLU"],["", ""]]
+      CLS_LAYER: ["", "", 1] # (norm_type, activation type, 1*1*256)
+      BIAS_LAYER: []  # ["GN", "", 1]
+      OUT_CHANNEL: 1024 #256 X 1 X 1
+      CONTRASTIVE_LOSS: ""
+      CLS_REWEIGHT: False
+      COMPRESS_CODE_W_MAX: False
+      POST_NORM: "GN" # add norm in the cond conv block
+      FREEZE: False
+DATASETS:
+  TRAIN: ("lvis_meta_train_basev1",)
+  TEST: ("lvis_meta_val_novelv1", "lvis_meta_val_basev1")
+SOLVER:
+  IMS_PER_BATCH: 48
+  MAX_ITER: 30000
+  WARMUP_ITERS: 1000
+  STEPS: (20000, 26000)
+  BASE_LR: 0.001
+  LR_SCHEDULER_NAME: "WarmupMultiStepLR"
+  REFERENCE_WORLD_SIZE: 0 # do not rescale, use 4 machines, 8 gpus per machine
+  CHECKPOINT_PERIOD: 5000
+  CLIP_GRADIENTS:
+    ENABLED: True
+    CLIP_TYPE: "norm"
+    CLIP_VALUE: 1.0
+
+DATALOADER:
+  ASPECT_RATIO_GROUPING: False # Does not support grouping now
+  NUM_WORKERS: 8
+# set up data loader
+D2GO_DATA:
+  # AUG_OPS:
+  #   TRAIN: [
+  #     # 'ResizeScaleOp::{"min_scale": 0.1, "max_scale": 2.0, "target_height": 1024, "target_width": 1024}',
+  #     "RandomFlipOp",
+  #     'FixedSizeCropOp::{"crop_size": [1024, 1024]}',
+  #     'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}',
+  #   ]
+  #   TEST: ["ResizeShortestEdgeOp"]
+  MAPPER:
+    BACKFILL_SIZE: False
+    CATCH_EXCEPTION: True
+    NAME: MetalearnDatasetMapper
+    RETRY: 3
+
+
+# MODELS
+# f292309945, 18.5AP,

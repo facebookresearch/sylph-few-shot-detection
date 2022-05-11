@@ -1,0 +1,115 @@
+
+# this is used to benchmarking once models where we use the very baseline
+_BASE_: "Base-Meta-FCOS.yaml" # ensure the pretraining is the same as previous training
+# Overwrites
+MODEL:
+  META_ARCHITECTURE: "MetaOneStageDetector"
+  WEIGHTS: "manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test/20210829212845/e2e_train/model_final.pth" #roi 14, no gn, 2 conv
+  DDP_FIND_UNUSED_PARAMETERS: True
+  BACKBONE:
+    NAME: "build_fcos_resnet_fpn_backbone"
+    FREEZE: True
+  RESNETS:
+    NORM: "FrozenBN" # in meta-learning, froze BN
+  PROPOSAL_GENERATOR:
+    NAME: "MetaFCOS"
+    # freeze by components
+    FREEZE_CLS_TOWER: True
+    # bbox tower and branch
+    FREEZE_BBOX_BRANCH: True
+  FCOS:
+    NUM_CLASSES: 866 #703 #405
+  TFA:
+    # turn off TFA
+    FINETINE: False
+    USE_PRETRAINED_BASE_CLS_LOGITS: False
+  META_LEARN:
+    EPISODIC_LEARNING: True
+    USE_ALL_GTS_IN_BASE_CLASSES: False # used in evaluation for base classes
+    CLASS: 3 # define episodics, CLASS is computed from gpu setup
+    SHOT: 5 # training shot
+    BASE_EVAL_SHOT: 10 # -1 means using all
+    EVAL_SHOT: 10 # for novel classes
+    QUERY_SHOT: 1
+    CODE_GENERATOR:
+      NAME: "CodeGenerator"
+      # delete these configs
+      USE_MASK: True
+      ALL_MASK: False
+      MASK_NORM: "GN"
+      # USE_BKG: True
+      USE_BIAS: False # when it is on, we use prior bias and potentially predicted bias
+      TOWER_LAYERS: [] # [["GN", "ReLU"], ["GN", "ReLU"], ["GN", "ReLU"]] # Layers before the conditional conv, eg, [["GN", "ReLU"],["", ""]]
+      CLS_LAYER: ["", "", 1] # (norm_type, activation type, 1*1*256)
+      # BIAS_LAYER: ["", "", 1] # TEST: use this for scale
+      # WEIGHT_LAYER: ["", "", 1]
+      # SCALE_LAYER: ["", "", 1] # weight norm, turn it on
+      OUT_CHANNEL: 256 #256 X 1 X 1
+      CONTRASTIVE_LOSS: ""
+      CLS_REWEIGHT: False
+      COMPRESS_CODE_W_MAX: False
+      POST_NORM: "" #"GN" # add norm after the mean, so no "GN" in CLS_LAYER
+      CONV_L2_NORM: False
+      USE_PER_CLS_SCALE: False # test see if it can compensate the bias, not used yet
+      #
+      FREEZE: False
+      DISTILLATION_LOSS_WEIGHT: 0.0 # when distillation is on, keep all setup same with pretraining
+      ROI_BOX:
+        POOLER_RESOLUTION: 7
+        POOLER_TYPE: "ROIAlignV2"
+  # PIXEL_MEAN: [102.9801, 115.9465, 122.7717]
+DATASETS:
+  TRAIN: ("lvis_meta_train_basefc",) #basefc (TFA)
+  TEST: ("lvis_meta_val_all", "lvis_meta_val_basefc","lvis_meta_val_novelr",) #"lvis_meta_val_all" (TFA)
+SOLVER:
+  IMS_PER_BATCH: 48 # 48 # we use 4 machines, each with 4 gpus, each gpu get 24/8 = 3 classes, 3*4
+  BASE_LR: 0.0005
+  STEPS: (20000, 26000) # (12000, 20000), (10000, 20000, 25000) # (60000, 80000)
+  MAX_ITER: 30000 #45000 #90000
+  REFERENCE_WORLD_SIZE: 16 # do not rescale
+  CHECKPOINT_PERIOD: 10000
+
+  CLIP_GRADIENTS:
+    ENABLED: True
+    CLIP_TYPE: "norm"
+    CLIP_VALUE: 1.0
+
+TEST:
+  REPEAT_TEST: 5
+  # EVAL_PERIOD: 0 #10000
+
+DATALOADER:
+  ASPECT_RATIO_GROUPING: False # Does not support grouping now
+  NUM_WORKERS: 8
+  # SAMPLER_TRAIN: "SupportSetRepeatFactorTrainingSampler"  # RepeatFactorTrainingSampler
+  # REPEAT_THRESHOLD: 0.001
+# set up data loader
+D2GO_DATA:
+  AUG_OPS:
+    TRAIN:
+      [
+        "ResizeShortestEdgeOp",
+        "RandomFlipOp",
+        'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}',
+      ]
+    #   [
+    #   ["ResizeShortestEdgeOp", "RandomFlipOp"]
+    #   'ResizeScaleOp::{"min_scale": 0.1, "max_scale": 2.0, "target_height": 1024, "target_width": 1024}',
+    #   "RandomFlipOp",
+    #   'FixedSizeCropOp::{"crop_size": [1024, 1024]}',
+    #   # 'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}',
+    # ]
+    TEST: ["ResizeShortestEdgeOp"]
+  MAPPER:
+    BACKFILL_SIZE: False
+    CATCH_EXCEPTION: True
+    NAME: MetalearnDatasetMapper
+    RETRY: 3
+
+# f294085537, 20210826213630 (predet, tfa, 28.2AP),
+# f294175712, 20210827111559 (predet, tfa, 29.5AP)
+# f294525988, 20210829201507 (tfa, imagenet, weight normalization, lower ap < no weight norm)
+# f294687713, 20210829212845(tfa, imagenet, 27AP)
+# pretraining f296624834, 20210910214457, strong demo
+# meta_learning f297599486,20210915093842 , strong demo
+# meta_learning  f294717624, 20210830230531 (TFA predet)

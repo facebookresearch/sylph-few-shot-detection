@@ -1,0 +1,59 @@
+# Few shot detection
+# META_ARCHITECTURE
+name: `MetaOneStageDetector`
+specify function to build backbone: `build_fcos_resnet_fpn_backbone`
+
+The architecture constructs the model, including base detector such as backbone and Few-shot hypernetwork.
+
+# How to add a new few-shot hypernetwork?
+## Code generator
+To customize or add another code generator, go to directory  `sylph/modeling/code_generator`. One example is to add roi_encoder.
+
+Please refer to build.py for initialize the code generator, and forward for inputs to run a code generator and outputs.
+
+## Runner
+As different code generator likely differs in code generator parameters, thus it is better that we add a new runner for each code generator we add. In this, refer to `sylph/runner/meta_fcos_roi_encoder_runner.py`. This runner should inherit from `MetaFCOSRunner` for training and testing data loaders, training and testing logics.
+
+## Load the flow
+Specify    `--config-file` and `--runner` in `tools/run.py`.
+# Config files
+`configs="sylph://LVIS-Meta-FCOS-Detection/Meta_FCOS_MS_R_50_1x.yaml"`
+
+# Train
+## Command
+Under folder  `sylph/tools`. Run `run.py`. Main change includes: `--config-file`, `--runner`.
+### Train Meta-FCOS
+#### COCO
+Pretraining
+```
+./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml"     --entitlement ar_rp_vll     --name "coco_pretraining"     --nodes 1 --num-gpus 8   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar     --canary --async-val --runner "sylph.runner.MetaFCOSRunner"
+```
+
+Meta-learning
+```
+./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml"     --entitlement ar_rp_vll     --name "coco_meta_learn"     --nodes 4 --num-gpus 4   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar    --async-val --canary --runner "sylph.runner.MetaFCOSRunner"
+```
+
+
+#### LVIS
+
+Pretraining
+```
+./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://LVISv1-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml"     --entitlement ar_rp_vll     --name "lvis_pretraining"     --nodes 1 --num-gpus 8   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar    --async-val --canary --runner "sylph.runner.MetaFCOSRunner"
+```
+Meta-leraning. Init the weights to the `pth` model in pretraining stage.
+```
+./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://LVISv1-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml"     --entitlement ar_rp_vll     --name "lvis_meta_learn"     --nodes 4 --num-gpus 4   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar     --canary --async-val --runner "sylph.runner.MetaFCOSRunner"
+```
+To change code generator, change config file and switch to a different Runner (TODO: merge them together to support differnt code generator in the same runner)
+### Train Mask RCNN
+Switch runner to "sylph.runner.MetaFasterRCNNRunner".
+
+Pretraining
+```
+./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://LVISv1-Detection/Meta-RCNN/Meta-RCNN-FPN-pretrain.yaml"     --entitlement ar_rp_vll     --name "lvis_pretraining"     --nodes 8 --num-gpus 8   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar     --canary --async-val --runner "sylph.runner.MetaFasterRCNNRunner"
+```
+Meta_learning
+```
+./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://LVISv1-Detection/Meta-RCNN/Meta-RCNN-FPN-finetune.yaml"     --entitlement ar_rp_vll     --name "lvis_meta_learn"     --nodes 4 --num-gpus 4   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar     --canary --async-val --runner "sylph.runner.MetaFasterRCNNRunner"
+```

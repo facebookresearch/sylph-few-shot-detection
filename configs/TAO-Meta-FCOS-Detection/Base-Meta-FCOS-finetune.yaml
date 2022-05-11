@@ -1,0 +1,72 @@
+MODEL:
+  META_ARCHITECTURE: "MetaOneStageDetector"
+  BACKBONE:
+    NAME: "build_fcos_resnet_fpn_backbone"
+    FREEZE: True # freeze backbone
+  RESNETS:
+    OUT_FEATURES: ["res3", "res4", "res5"]
+  FPN:
+    IN_FEATURES: ["res3", "res4", "res5"]
+  FCOS:
+    NUM_CLASSES: 1103 #703 # not used in meta-finetuning
+    POST_NMS_TOPK_TEST: 300
+    POST_NMS_TOPK_TRAIN: 300
+    NMS_TH: 0.6 # from 0.6 to 0.5
+    NUM_CLS_CONVS: 4
+
+  DDP_FIND_UNUSED_PARAMETERS: False
+
+  PROPOSAL_GENERATOR:
+    NAME: "MetaFCOS"
+    FREEZE_CLS_TOWER: False
+    FREEZE_BBOX_TOWER: False
+  META_LEARN:
+    EPISODIC_LEARNING: True # finetune
+    CODE_GENERATOR:
+      NAME: "CodeGenerator"
+      USE_MASK: True
+      ALL_MASK: False
+      MASK_NORM: "GN"
+      # USE_BKG: True # background mask, which can also be mistaking
+      # CODE_NORM: False
+      TOWER_LAYERS: [] # Layers before the conditional conv, eg, [["LN", "ReLU"],["", ""]]
+      CLS_LAYER: ["", "", 1] # (norm_type, activation type, 2 *2 *256)
+      BIAS_LAYER: []
+      OUT_CHANNEL: 256 #256 X 1 X 1
+      USE_DEFORMABLE: False
+      BOX_ON: False
+      BOX_BIAS_LAYER: []
+      BOX_CLS_LAYER: ["LN", "", 1]
+      BOX_TOWER_LAYERS: []
+      CONTRASTIVE_LOSS: ""
+      CLS_REWEIGHT: False
+    CLASS: 3 # define episodics, CLASS is computed from gpu setup
+    SHOT: 10 # training shot
+    EVAL_SHOT: 10
+    QUERY_SHOT: 1
+  # PIXEL_MEAN: [102.9801, 115.9465, 122.7717]
+DATASETS:
+  TRAIN: ()
+  TEST: ("tao_meta_val_novelpartial", )
+SOLVER:
+  IMS_PER_BATCH: 48 # we use 4 machines, each with 4 gpus, each gpu get 48/16 = 3 classes, 3*4
+  BASE_LR: 0.005  # Note that RetinaNet uses a different default learning rate
+  STEPS: (10000, 15000, 20000) # (60000, 80000)
+  MAX_ITER: 25000
+  REFERENCE_WORLD_SIZE: 0 # do not change my preferred world size
+TEST:
+  EVAL_PERIOD: 1000
+
+INPUT:
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+
+DATALOADER:
+  ASPECT_RATIO_GROUPING: False # Does not support grouping now
+  NUM_WORKERS: 8
+# set up data loader
+D2GO_DATA:
+  MAPPER:
+    BACKFILL_SIZE: False
+    CATCH_EXCEPTION: True
+    NAME: MetalearnDatasetMapper
+    RETRY: 3

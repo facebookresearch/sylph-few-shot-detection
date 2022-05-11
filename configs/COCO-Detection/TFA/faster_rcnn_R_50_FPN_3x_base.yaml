@@ -1,0 +1,18 @@
+_BASE_: "./Base-RCNN-FPN.yaml"
+MODEL:
+  META_ARCHITECTURE: "GeneralizedRCNNFewShot"
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  MASK_ON: False
+  RESNETS:
+    DEPTH: 50
+  ROI_HEADS:
+    NUM_CLASSES: 60
+DATASETS:
+  TRAIN: ("coco_pretrain_train_base",)
+  TEST: ("coco_pretrain_val_base",)
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.02
+  STEPS: (85000, 100000)
+  MAX_ITER: 110000
+OUTPUT_DIR: "manifold://fai4ar/tree/liyin/few-shot/baselines/base"

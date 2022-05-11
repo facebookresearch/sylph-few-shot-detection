@@ -1,0 +1,54 @@
+_BASE_: "Base-Meta-FCOS.yaml"
+MODEL:
+  META_ARCHITECTURE: "MetaOneStageDetector"
+  # WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  WEIGHTS: "manifold://uru_detection/tree/fblearner/ururpn_lvis_R50.eUamcLQKDY/e2e_train/model_final.pth" #"detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  DDP_FIND_UNUSED_PARAMETERS: True
+  PROPOSAL_GENERATOR:
+      OWD: True
+  META_LEARN:
+    EPISODIC_LEARNING: False # pretraining
+  FCOS:
+    NUM_CLASSES: 1103 #866 #405
+    L2_NORM_CLS_WEIGHT: False
+    BOX_QUALITY: ["iou"]
+DATASETS:
+  TRAIN: ("lvis_pretrain_train_basev1",)
+  TEST: ("lvis_pretrain_val_basev1",)
+SOLVER:
+  IMS_PER_BATCH: 64 #16
+  BASE_LR: 0.01
+  STEPS: (60000, 80000) #(2080000, 2775000) # (60000, 80000)
+  MAX_ITER: 90000 #3125000 # (100000/16.0) * 500
+  REFERENCE_WORLD_SIZE: 8 # 8 * 8
+  CHECKPOINT_PERIOD: 10000
+  # LR_MULTIPLIER_OVERWRITE, [{'backbone': 0.1}, {'reference_points': 0.1, 'sampling_offsets': 0.1}]
+
+
+D2GO_DATA:
+  # AUG_OPS:
+    # TRAIN: [
+    #   "ResizeShortestEdgeOp",
+    #   #'ResizeScaleOp::{"min_scale": 0.1, "max_scale": 2.0, "target_height": 1024, "target_width": 1024}',
+    #   "RandomFlipOp",
+    #   # 'FixedSizeCropOp::{"crop_size": [1024, 1024]}', #
+    #   'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}',
+    # ]
+    # TEST: ["ResizeShortestEdgeOp"]
+
+  AUG_OPS:
+    TRAIN: [
+      'ResizeScaleOp::{"min_scale": 0.1, "max_scale": 2.0, "target_height": 1024, "target_width": 1024}',
+      "RandomFlipOp",
+      'FixedSizeCropOp::{"crop_size": [1024, 1024]}',
+      'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}',
+    ]
+    TEST: ["ResizeShortestEdgeOp"]
+# INPUT:
+#   CROP:
+#     PRE_CROP: [
+#       'ResizeScaleOp::{"min_scale": 0.1, "max_scale": 2.0, "target_height": 1024, "target_width": 1024}',
+#     ]
+DATALOADER:
+  SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
+  REPEAT_THRESHOLD: 0.001

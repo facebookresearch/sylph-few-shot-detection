@@ -1,0 +1,8 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+
+buck_filegroup(
+    name = "configs",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+)

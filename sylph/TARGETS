@@ -1,0 +1,59 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("//bento:buck_macros.bzl", "bento_kernel")
+
+python_library(
+    # @autodeps-skip
+    name = "sylph",
+    srcs = glob(
+        [
+            "*.py",
+            "config/**/*",
+            "data/**/*",
+            "evaluation/**/*",
+            "modeling/**/*",
+            "runner/**/*",
+            "model_zoo/**/*.py",
+        ],
+    ),
+    base_module = "sylph",
+    cpp_deps = [],
+    import_profile = True,
+    py_version = ">=3.6",
+    resources = {
+        "//cv_mm/sylph/configs:configs": "model_zoo/configs",
+    },
+    deps = [
+        "fbsource//third-party/pypi/timm:timm",
+        "//cv_mm/egodet/egodet/data:lib",
+        "//cv_mm/egodet/egodet/model:lib",
+        "//deeplearning/projects/AdelaiDet:adet",
+        "//mobile-vision/d2go/d2go:d2go",
+        "//mobile-vision/d2go/projects/adet:lib",
+        "//mobile-vision/d2go/tools:lib",
+    ],
+)
+
+# build the kernel
+# buck build @mode/dev-nosan //cv_mm/sylph/sylph:bento_kernel_sylph_kernel
+bento_kernel(
+    name = "sylph_kernel",
+    deps = [
+        ":sylph",
+        "//manifold/clients/python:manifold_client",
+    ],
+    external_deps = [],  # You can remove this if you don't have external deps
+)
+
+# python_binary(
+#     name = "predictor",
+#     srcs = [
+#         "predictor.py",
+#     ],
+#     main_module = "cv_mm.sylph.tools.visualize_result",
+#     par_style = "xar",
+#     py_version = ">=3",
+#     deps = [
+#         "//cv_mm/sylph/sylph:sylph",
+#         "//vision/fair/detectron2/detectron2:detectron2",
+#     ],
+# )

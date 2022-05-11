@@ -1,0 +1,30 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+python_binary(
+    # @autodeps-skip
+    name = "visualize_result",
+    srcs = [
+        "visualize_result.py",
+    ],
+    main_module = "cv_mm.sylph.tools.visualize_result",
+    par_style = "xar",
+    py_version = ">=3",
+    deps = [
+        "//cv_mm/sylph/sylph:sylph",
+        "//vision/fair/detectron2/detectron2:detectron2",
+    ],
+)
+
+python_binary(
+    name = "visualize_class_codes",
+    srcs = [
+        "visualize_class_codes.py",
+    ],
+    main_module = "cv_mm.sylph.tools.visualize_class_codes",
+    par_style = "xar",
+    py_version = ">=3",
+    deps = [
+        "//cv_mm/sylph/sylph:sylph",
+        "//vision/fair/detectron2/detectron2:detectron2",
+    ],
+)

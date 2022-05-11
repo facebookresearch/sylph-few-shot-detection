@@ -1,0 +1,30 @@
+_BASE_: "Base-Meta-FCOS-finetune.yaml"
+MODEL:
+  WEIGHTS: "manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test/20210714182950/e2e_train/model_final.pth"
+  # WEIGHTS_FILTER_BY_MODULE: ["proposal_generator"] # delete proposal_generator, cls_tower
+  # LVIS PRETRAINED "manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test/20210604091530/e2e_train/model_final.pth"
+  # COCO PRETRAINED 20210322202841
+  # LVIS v2:20210605084507
+  # LVIS base v4: 20210611135305
+  # LVIS base x2: 20210604091530, all base classes
+  # LVIS basemix PRETRAINED: 20210610204829
+  # LVIS basemix finetuned: 20210611133408
+  # LVIS basefrequent PRETRAINED: 20210613145146
+  # LVID basefrequent finetuned:20210613172631
+  # LVID bsefrequent pretrain RFS: 20210614185155, model_0024999
+  # LVIS basefrequent pretrined k 5: 20210615083533
+  # LVIS basefrequent cls conv 6: 20210615084044, model_0019999
+  # COCO finetuned: 20210523175827
+  # LVIS basefrequent pretrained 1103 classes: f281123326, 20210621150555
+  # LVIs 1103 pretrain: f285739647, 20210714182950, k_s =1
+  # LVIS 1103 pretrain no rfs: 20210719095420
+  # LVIS 1103 k_s=1, data aug, rfs,f289175607, 20210730113846
+  # LVIS meta-learn 1103,f289301594, 20210802025352
+  # LVIS 1103 pretrain, data aug, rfs, f289598829, 100 epochs,20210803120856
+  # LVIS 1103, data aug, rfs, with unknown F292586399, 20210818221333
+
+  RESNETS:
+    DEPTH: 50
+# DATALOADER:
+#   SAMPLER_TRAIN: "SupportSetRepeatFactorTrainingSampler"  # RepeatFactorTrainingSampler
+#   REPEAT_THRESHOLD: 0.001

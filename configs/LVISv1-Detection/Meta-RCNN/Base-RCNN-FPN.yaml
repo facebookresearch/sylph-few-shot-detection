@@ -1,0 +1,92 @@
+MODEL:
+  META_ARCHITECTURE: "FewShotDetector"
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  BACKBONE:
+    NAME: "build_resnet_fpn_backbone"
+    # FREEZE_AT: 2
+  MASK_ON: False
+  RESNETS:
+    OUT_FEATURES: ["res2", "res3", "res4", "res5"]
+    DEPTH: 50
+    # NORM: SyncBN
+    # NORM: "SyncBN"
+    # STRIDE_IN_1X1: True
+  FPN:
+    IN_FEATURES: ["res2", "res3", "res4", "res5"]
+    # NORM: SyncBN
+    # NORM: "GN"
+  PROPOSAL_GENERATOR:
+    NAME: "RPN"
+  # META_LEARN:
+  #   EPISODIC_LEARNING: False # pretraining
+  ANCHOR_GENERATOR:
+    SIZES: [[32], [64], [128], [256], [512]]  # One size for each in feature map
+    ASPECT_RATIOS: [[0.5, 1.0, 2.0]]  # Three aspect ratios (same for all in feature maps)
+  RPN:
+    HEAD_NAME: "StandardRPNHead"
+    IN_FEATURES: ["p2", "p3", "p4", "p5", "p6"]
+    PRE_NMS_TOPK_TRAIN: 2000  # Per FPN level
+    PRE_NMS_TOPK_TEST: 1000  # Per FPN level
+    # Detectron1 uses 2000 proposals per-batch,
+    # (See "modeling/rpn/rpn_outputs.py" for details of this legacy issue)
+    # which is approximately 1000 proposals per-image since the default batch size for FPN is 2.
+    POST_NMS_TOPK_TRAIN: 1000
+    POST_NMS_TOPK_TEST: 1000
+  ROI_HEADS:
+    NAME: "BiStandardROIHeads"
+    IN_FEATURES: ["p2", "p3", "p4", "p5"]
+    JITTER_MATCH_QUALITY: True
+    # NORM: "GN"
+    NUM_CLASSES: 1103
+    SCORE_THRESH_TEST: 0.0001
+  ROI_BOX_HEAD:
+    NAME: "FastRCNNConvFCHead"
+    NUM_FC: 2
+    POOLER_RESOLUTION: 7
+    # NORM: SyncBN
+    # NORM: "GN"
+  ROI_MASK_HEAD:
+    NAME: "MaskRCNNConvUpsampleHead"
+    NUM_CONV: 4
+    POOLER_RESOLUTION: 14
+# DATASETS:
+#   TRAIN: ("lvis_pretrain_train_basev1",)
+#   TEST: ("lvis_pretrain_val_basev1",)
+# DATALOADER:
+#   SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
+#   REPEAT_THRESHOLD: 0.001
+TEST:
+  DETECTIONS_PER_IMAGE: 300  # LVIS allows up to 300
+# SOLVER: # total schedule: 64/16 / (0.02/0.02) = 2x
+#   IMS_PER_BATCH: 32 # num_machine(4) * batch_size(16)
+#   BASE_LR: 0.01 # default 0.02 leads to loss NaN
+#   STEPS: (120000, 160000)
+#   MAX_ITER: 180000
+#   WARMUP_ITERS: 5000
+#   LR_SCHEDULER_NAME: "WarmupMultiStepLR" #"WarmupCosineLR"
+#   REFERENCE_WORLD_SIZE: 32 # 4 machines, each 8 gpus (in default 8)
+#   CHECKPOINT_PERIOD: 20000
+
+INPUT:
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+VERSION: 2
+
+# refer to fbcode/vision/fair/detectron2/configs/LVISv1-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+# refer to fbsource/fbcode/mobile-vision/experimental/xray_detection_beta/configs/wyi/joint_xraysub_1_birch_2_vogue_3_R_50-FPN_syncbn_2m.yaml
+# MODEL:
+#   BACKBONE:
+#     FREEZE_AT: 0
+#   MASK_ON: False
+#   RESNETS:
+#     DEPTH: 50
+#     NORM: "SyncBN"
+#     STRIDE_IN_1X1: True
+#   FPN:
+#     NORM: "SyncBN"
+#   ROI_BOX_HEAD:
+#     NORM: "SyncBN"
+#   ROI_MASK_HEAD:
+#     NORM: "SyncBN"
+# SOLVER:
+#   STEPS: (210000, 250000)
+#   MAX_ITER: 270000

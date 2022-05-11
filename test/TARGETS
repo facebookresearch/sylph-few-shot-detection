@@ -1,0 +1,47 @@
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs:testpilot_defs.bzl", "special_tags")
+
+# unit tests:
+# buck test @mode/dev test: -- --print-passing-details  # run all tests at the same time
+# buck run //cv_mm/sylph/test:runner_meta_fcos_runner_test
+# buck build @mode/dev-nosan --show-output test:runner_meta_fcos_runner_test
+[
+    python_unittest(
+        # @autodeps-skip
+        name = test,
+        srcs = [
+            "%s.py" % test,
+        ],
+        base_module = "sylph",
+        py_version = ">=3.5",
+        resources = {
+            "//cv_mm/sylph/configs:configs": "model_zoo/configs",
+        },
+        strip_libpar = False,
+        tags = [special_tags.run_as_bundle],
+        deps = [
+            "//cv_mm/sylph/sylph:sylph",
+        ],
+        external_deps = [],
+    )
+    for test in [
+        # naming convention for unit tests: <folder>_<file>_test.py
+        # sort unit tests alphabetically
+        "runner_meta_fcos_runner_test",
+        "runner_meta_fcos_runner_data_loader_test",
+        "runner_meta_fcos_roi_encoder_runner_test",
+        "predictor_test",
+        "code_generator_code_generator_test",
+        "code_generator_roi_encoder_test",
+        "runner_meta_faster_rcnn_runner_test",
+        "runner_tfa_runner_test",
+        "modeling_meta_fcos_fcos_test",
+        "evaluation_meta_learn_evaluation_test",
+    ]
+]
+
+
+#     ✗ cv_mm/sylph/test:runner_meta_faster_rcnn_runner_test - test_runner_lvis_meta_learn_test_instances (sylph.runner_meta_faster_rcnn_runner_test.TestMetaFasterRCNNRunner)
+    # ✗ cv_mm/sylph/test:code_generator_code_generator_test - test_code_generator_inference (sylph.code_generator_code_generator_test.TestCodeGenerator)
+    # ✗ cv_mm/sylph/test:runner_meta_fcos_runner_data_loader_test - test_few_shot_test_support_set_base (sylph.runner_meta_fcos_runner_data_loader_test.TestFewShotDataLoader)
+    # ✗ cv_mm/sylph/test:runner_meta_fcos_runner_test - test_runner_lvis_meta_learn_evaluation (sylph.runner_meta_fcos_runner_test.TestMetaFCOS)

@@ -1,0 +1,56 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+python_binary(
+    name = "preprocess_coco",
+    srcs = [
+        "preprocess_coco.py",
+    ],
+    main_module = "cv_mm.sylph.tools.datasets.preprocess_coco",
+    par_style = "xar",
+    py_version = ">=3",
+    deps = [
+        "fbsource//third-party/pypi/numpy:numpy",
+        "fbsource//third-party/pypi/pillow:pillow",
+        "//vision/fair/detectron2/detectron2:detectron2",  # noqa
+    ],
+)
+
+python_binary(
+    name = "split_base_novel_coco",
+    srcs = [
+        "split_base_novel_coco.py",
+    ],
+    main_module = "cv_mm.sylph.tools.datasets.split_base_novel_coco",
+    par_style = "xar",
+    py_version = ">=3",
+    deps = [
+        "//deeplearning/projects/cocoApi/PythonAPI/pycocotools:pycocotools",
+        "//vision/fair/detectron2/detectron2:detectron2",
+    ],
+)
+
+python_binary(
+    name = "split_lvis_cnno",
+    srcs = [
+        "split_lvis_cnno.py",
+    ],
+    main_module = "cv_mm.sylph.tools.datasets.split_lvis_cnno",
+    py_version = ">=3",
+    deps = [
+        "//vision/fair/detectron2/detectron2:detectron2",
+    ],
+)
+
+python_binary(
+    name = "predefine_support_set",
+    srcs = [
+        "predefine_support_set.py",
+    ],
+    main_module = "cv_mm.sylph.tools.datasets.predefine_support_set",
+    py_version = ">=3",
+    deps = [
+        "fbsource//third-party/pypi/numpy:numpy",
+        "//cv_mm/sylph/sylph:sylph",
+        "//vision/fair/detectron2/detectron2:detectron2",
+    ],
+)

@@ -1,0 +1,108 @@
+# benchmarking freeze all, right now base and novel is evaluated separately
+_BASE_: "Base-FCOS.yaml"
+MODEL:
+  META_ARCHITECTURE: "MetaOneStageDetector"
+  # default:20211103170535
+  # eval with lvis: 20211105173218, All
+  WEIGHTS: "manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test/20211105173218/e2e_train/model_final.pth" #20210803120856
+  # WEIGHTS: "manifold://uru_detection/tree/fblearner/ururpn_lvis_R50.eUamcLQKDY/e2e_train/model_final.pth"
+  DDP_FIND_UNUSED_PARAMETERS: True
+  BACKBONE:
+    NAME: "build_fcos_resnet_fpn_backbone"
+    FREEZE: True
+  FCOS:
+    NUM_CLASSES: 1000 # does not matter in meta learning
+  PROPOSAL_GENERATOR:
+    NAME: "MetaFCOS"
+    # FREEZE: False
+    FREEZE_CLS_TOWER: True
+    FREEZE_BBOX_BRANCH: True
+  # TFA:
+  #   # turn off TFA
+  #   FINETINE: False
+  #   USE_PRETRAINED_BASE_CLS_LOGITS: True
+  #   EVAL_WITH_PRETRAINED_BASE_CLS_LOGITS: True
+  META_LEARN:
+    EPISODIC_LEARNING: True
+    USE_ALL_GTS_IN_BASE_CLASSES: False # used in evaluation for base classes
+    CLASS: 3 # define episodics, CLASS is computed from gpu setup
+    SHOT: 5 # training shot
+    BASE_EVAL_SHOT: 10 # -1 means using all
+    EVAL_SHOT: 10 # for novel classes
+    QUERY_SHOT: 1
+    CODE_GENERATOR:
+      NAME: "CodeGenerator"
+      USE_MASK: True
+      ALL_MASK: False
+      MASK_NORM: "GN"
+      # USE_BKG: True # background mask
+      CONV_L2_NORM: True
+      USE_BIAS: True # when it is on, we use prior bias and potentially predicted bias
+      TOWER_LAYERS: [["GN", "ReLU"], ["GN", "ReLU"]] # Layers before the conditional conv, eg, [["LN", "ReLU"],["", ""]]
+      CLS_LAYER: ["", "", 1] # (norm_type, activation type, 2 *2 *256)
+      BIAS_LAYER: ["", "", 1]
+      OUT_CHANNEL: 256 #256 X 1 X 1
+      CONTRASTIVE_LOSS: ""
+      CLS_REWEIGHT: False
+      COMPRESS_CODE_W_MAX: False
+      POST_NORM: "GN" # add norm after the mean, so no "GN" in CLS_LAYER
+      FREEZE: False
+      DISTILLATION_LOSS_WEIGHT: 0.0 # when distillation is on, keep all setup same with pretraining
+
+  # PIXEL_MEAN: [102.9801, 115.9465, 122.7717]
+DATASETS:
+  TRAIN: ("lvis_meta_train_cnno",)
+  TEST: ("coco_meta_val_novel", "coco_meta_val_base", )
+SOLVER:
+  IMS_PER_BATCH: 48 # we use 2 machines, each with 4 gpus, each gpu get 24/8 = 3 classes, 3*4
+  BASE_LR: 0.0005  # Note that RetinaNet uses a different default learning rate (1/20 of pretraining)
+  STEPS: (20000, 26000) #(10000, 15000) # (60000, 80000)
+  MAX_ITER: 30000 #45000 #90000, using 4 machines, seems 45000 overfits
+  REFERENCE_WORLD_SIZE: 16 # do not change my preferred world size
+  CHECKPOINT_PERIOD: 10000
+
+
+  # WEIGHT_DECAY: 0.1
+  # BASE_LR: 0.01  # Note that RetinaNet uses a different default learning rate
+  # STEPS: (60000, 80000)
+  # MAX_ITER: 90000
+  CLIP_GRADIENTS:
+    ENABLED: True
+    CLIP_TYPE: "norm"
+    CLIP_VALUE: 1.0
+
+TEST:
+  REPEAT_TEST: 5 # conduct multiple eval and get mean and std
+
+INPUT:
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+
+# D2GO_DATA:
+#   AUG_OPS:
+#     # TRAIN:
+#       # [
+#       #   "ResizeShortestEdgeOp",
+#       #   "RandomFlipOp",
+#       #   'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}',
+#       # ]
+#     TRAIN: [
+#       'ResizeScaleOp::{"min_scale": 0.5, "max_scale": 2.0, "target_height": 1024, "target_width": 1024}',
+#       "RandomFlipOp",
+#       'FixedSizeCropOp::{"crop_size": [1024, 1024]}',
+#       'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}',
+#     ]
+#     TEST: ["ResizeShortestEdgeOp"]
+
+DATALOADER:
+  ASPECT_RATIO_GROUPING: False # Does not support grouping now
+  NUM_WORKERS: 8
+# set up data loader
+D2GO_DATA:
+  MAPPER:
+    BACKFILL_SIZE: False
+    CATCH_EXCEPTION: True
+    NAME: MetalearnDatasetMapper
+    RETRY: 3
+
+# pretraining:  f303541499, no aug,20211017143946
+# pretraining, predet, aug,
