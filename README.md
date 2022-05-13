@@ -18,7 +18,7 @@ Install dependencies:
 pip3 install -r requirements.txt --find-links https://download.pytorch.org/whl/nightly/cu102/torch_nightly.html
 ```
 
-Install d2go separately. Follow the instruction here: https://github.com/facebookresearch/d2go/blob/main/README.md.
+Install d2go separately. Follow the instruction here: https://github.com/facebookresearch/d2go/blob/main/README.md. Use `python setup.py install`.
 
 
 
