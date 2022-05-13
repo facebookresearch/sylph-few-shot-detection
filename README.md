@@ -1,5 +1,7 @@
 # Few shot detection
 ## Install packages
+Need python>3.8.
+
 Install virtualenv if its not installed yet.
 ```
 python3 -m pip install --user virtualenv
