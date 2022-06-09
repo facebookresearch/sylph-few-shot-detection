@@ -6,7 +6,8 @@ from typing import Dict, List, Tuple, Union, Optional, Any
 import numpy as np
 import torch
 from detectron2.config import configurable
-from detectron2.fb.legacy import FastRCNNOutputs
+# from detectron2.fb.legacy import FastRCNNOutputs
+from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputs
 from detectron2.layers import nonzero_tuple, Linear
 from detectron2.modeling.proposal_generator.proposal_utils import (
     add_ground_truth_to_proposals,
@@ -182,7 +183,8 @@ class FocalLossOutputs(FastRCNNOutputs):
             )
         # exclude "giou"
         else:
-            raise ValueError(f"Invalid bbox reg loss type '{self.box_reg_loss_type}'")
+            raise ValueError(
+                f"Invalid bbox reg loss type '{self.box_reg_loss_type}'")
 
         # The loss is normalized using the total number of regions (R), not the number
         # of foreground regions even though the box regression loss is only defined on
@@ -228,13 +230,15 @@ class FocalLossOutputs(FastRCNNOutputs):
         fg_gt_classes = self.gt_classes[fg_inds]
         fg_pred_classes = pred_classes[fg_inds]
 
-        num_false_negative = (fg_pred_classes == bg_class_ind).nonzero().numel()
+        num_false_negative = (
+            fg_pred_classes == bg_class_ind).nonzero().numel()
         num_accurate = (pred_classes == self.gt_classes).nonzero().numel()
         fg_num_accurate = (fg_pred_classes == fg_gt_classes).nonzero().numel()
 
         storage = get_event_storage()
         if num_instances > 0:
-            storage.put_scalar("fast_rcnn/cls_accuracy", num_accurate / num_instances)
+            storage.put_scalar("fast_rcnn/cls_accuracy",
+                               num_accurate / num_instances)
             if num_fg > 0:
                 storage.put_scalar(
                     "fast_rcnn/fg_cls_accuracy", fg_num_accurate / num_fg
@@ -283,7 +287,8 @@ class FocalLossOutputLayers(FastRCNNOutputLayers):
         #         self.cls_score = Linear(input_size, num_classes + 1)
         # Logits for background is no longer predicted since sigmoid is used instead of
         # softmax and "background" can be reflected by low logits for all foregrounds.
-        self.cls_score = Linear(self.cls_score.in_features, kwargs["num_classes"])
+        self.cls_score = Linear(
+            self.cls_score.in_features, kwargs["num_classes"])
         nn.init.normal_(self.cls_score.weight, std=0.01)
         nn.init.constant_(self.cls_score.bias, 0)
         # `self.cls_score` will be used in `forward()` by: `scores = self.cls_score(x)`
@@ -349,7 +354,8 @@ class FocalLossOutputLayers(FastRCNNOutputLayers):
         num_inst_per_image = [len(p) for p in proposals]
         scores = scores.sigmoid_()
         # The following inference function is implemented to ignore the placeholder.
-        background_placeholder = torch.zeros(scores.shape[0], 1, device=scores.device)
+        background_placeholder = torch.zeros(
+            scores.shape[0], 1, device=scores.device)
         probs = torch.cat((scores, background_placeholder), 1)
         return probs.split(num_inst_per_image, dim=0)
 
@@ -390,7 +396,8 @@ class BiFocalLossOutputLayers(FocalLossOutputLayers):
             # add cond clas_layer here
             self.cls_score = LinearModule()
         else:
-            self.cls_score = Linear(self.cls_score.in_features, kwargs["num_classes"])
+            self.cls_score = Linear(
+                self.cls_score.in_features, kwargs["num_classes"])
             nn.init.normal_(self.cls_score.weight, std=0.01)
             nn.init.constant_(self.cls_score.bias, 0)
 
@@ -434,7 +441,8 @@ class BiFocalLossOutputLayers(FocalLossOutputLayers):
             assert class_codes is not None
             scores = self.cls_score(
                 x,
-                class_codes["cls_conv"].view(-1, class_codes["cls_conv"].size(1)),
+                class_codes["cls_conv"].view(-1,
+                                             class_codes["cls_conv"].size(1)),
                 class_codes["cls_bias"],
             )
         else:
@@ -547,7 +555,8 @@ class MappedInstances(Instances):
     """
 
     def __init__(self, instances: "Instances", category_range: Tuple[int]):
-        super(MappedInstances, self).__init__(instances.image_size, **instances._fields)
+        super(MappedInstances, self).__init__(
+            instances.image_size, **instances._fields)
         self._category_range = category_range
 
     # Tensor-like methods
@@ -558,7 +567,8 @@ class MappedInstances(Instances):
             if the field has this method.
         """
         # CHANGE
-        ret = MappedInstances(Instances(self._image_size), self._category_range)
+        ret = MappedInstances(Instances(self._image_size),
+                              self._category_range)
         for k, v in self._fields.items():
             if hasattr(v, "to"):
                 v = v.to(*args, **kwargs)
@@ -583,7 +593,8 @@ class MappedInstances(Instances):
                 item = slice(item, None, len(self))
 
         # CHANGE
-        ret = MappedInstances(Instances(self._image_size), self._category_range)
+        ret = MappedInstances(Instances(self._image_size),
+                              self._category_range)
         for k, v in self._fields.items():
             ret.set(k, v[item])
         return ret
@@ -687,7 +698,8 @@ class SoftmaxROIHeads(StandardROIHeads):
                     1e-5 * torch.empty_like(match_quality_matrix).uniform_()
                 )
 
-            matched_idxs, matched_labels = self.proposal_matcher(match_quality_matrix)
+            matched_idxs, matched_labels = self.proposal_matcher(
+                match_quality_matrix)
             sampled_idxs, gt_classes = self._sample_proposals(
                 matched_idxs, matched_labels, targets_per_image.gt_classes
             )
@@ -708,14 +720,17 @@ class SoftmaxROIHeads(StandardROIHeads):
                     if trg_name.startswith("gt_") and not proposals_per_image.has(
                         trg_name
                     ):
-                        proposals_per_image.set(trg_name, trg_value[sampled_targets])
+                        proposals_per_image.set(
+                            trg_name, trg_value[sampled_targets])
             else:
                 gt_boxes = Boxes(
-                    targets_per_image.gt_boxes.tensor.new_zeros((len(sampled_idxs), 4))
+                    targets_per_image.gt_boxes.tensor.new_zeros(
+                        (len(sampled_idxs), 4))
                 )
                 proposals_per_image.gt_boxes = gt_boxes
 
-            num_bg_samples.append((gt_classes == self.num_classes).sum().item())
+            num_bg_samples.append(
+                (gt_classes == self.num_classes).sum().item())
             num_fg_samples.append(gt_classes.numel() - num_bg_samples[-1])
             proposals_with_gt.append(proposals_per_image)
 
@@ -750,7 +765,8 @@ class SigmoidROIHeads(SoftmaxROIHeads):
     def _init_box_head(cls, cfg, input_shape):
         ret = super()._init_box_head(cfg, input_shape)
         # update output layer
-        ret["box_predictor"] = FocalLossOutputLayers(cfg, ret["box_head"].output_shape)
+        ret["box_predictor"] = FocalLossOutputLayers(
+            cfg, ret["box_head"].output_shape)
         return ret
 
 
@@ -819,10 +835,12 @@ class BiStandardROIHeads(SigmoidROIHeads):
             losses.update(self._forward_keypoint(features, proposals))
             return proposals, losses
         else:
-            pred_instances = self._forward_box(features, proposals, class_codes)
+            pred_instances = self._forward_box(
+                features, proposals, class_codes)
             # During inference cascaded prediction is used: the mask and keypoints heads are only
             # applied to the top scoring box detections.
-            pred_instances = self.forward_with_given_boxes(features, pred_instances)
+            pred_instances = self.forward_with_given_boxes(
+                features, pred_instances)
             return pred_instances, {}
 
     def _forward_box(
@@ -849,7 +867,8 @@ class BiStandardROIHeads(SigmoidROIHeads):
             In inference, a list of `Instances`, the predicted instances.
         """
         features = [features[f] for f in self.box_in_features]
-        box_features = self.box_pooler(features, [x.proposal_boxes for x in proposals])
+        box_features = self.box_pooler(
+            features, [x.proposal_boxes for x in proposals])
         box_features = self.box_head(box_features)
         predictions = self.box_predictor(box_features, class_codes)
         del box_features
@@ -869,8 +888,10 @@ class BiStandardROIHeads(SigmoidROIHeads):
                     for proposals_per_image, pred_boxes_per_image in zip(
                         proposals, pred_boxes
                     ):
-                        proposals_per_image.proposal_boxes = Boxes(pred_boxes_per_image)
+                        proposals_per_image.proposal_boxes = Boxes(
+                            pred_boxes_per_image)
             return losses
         else:
-            pred_instances, _ = self.box_predictor.inference(predictions, proposals)
+            pred_instances, _ = self.box_predictor.inference(
+                predictions, proposals)
             return pred_instances

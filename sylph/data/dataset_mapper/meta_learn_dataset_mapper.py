@@ -13,16 +13,14 @@ from d2go.data.dataset_mappers.d2go_dataset_mapper import (
     PREFETCHED_SEM_SEG_FILE_NAME,
     read_image_with_prefetch,
 )
-from d2go.data.transforms.fb.copy_paste_augmentation import AugDualInput
 from detectron2.data import detection_utils as utils, transforms as T
 
-from d2go.data.fb import detection_utils as d2go_detection_utils
+# from d2go.data.fb import detection_utils as d2go_detection_utils
 
 from detectron2.data.transforms.augmentation import (
     AugInput,
     AugmentationList,
 )
-
 
 
 logger = logging.getLogger(__name__)
@@ -31,6 +29,8 @@ logger = logging.getLogger(__name__)
 @D2GO_DATA_MAPPER_REGISTRY.register()
 class MetalearnDatasetMapper(D2GoDatasetMapper):
     """
+    Mostly the same with D2GoDatasetMapper, with the change of need_annotation.
+
     Map a dataset_dict which is a dict from
     "query_set" : 2-d list, c * sq
     "support_set": 2-d list, c * s
@@ -50,27 +50,19 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
         super().__init__(cfg, is_train, image_loader, tfm_gens)
         self.need_annotation = need_annotation
 
-        # if cfg.INPUT.CROP.ENABLED and is_train:
-        #     self.pre_crop_tfm_gens = self._prepare_pre_crop_augmentation(cfg, is_train)
-        #     self.crop_gen = T.RandomCrop(cfg.INPUT.CROP.TYPE, cfg.INPUT.CROP.SIZE)
-        #     logger.info(f"pre_crop_tfm_gens {self.pre_crop_tfm_gens}")
-        #     logger.info(f"crop_gen {self.crop_gen}")
-        # else:
-        #     self.pre_crop_tfm_gens = None
-        #     self.crop_gen = None
-
     def _original_call_per_item(self, dataset_dict):
         """
         Modified from d2go's _original_call in D2GoDatasetMapper. The only change is:
         self.need_annotation can happen regarding is_train or not. This is added for
-        generating support set while class registration in episodic learning
+        generating support set while class registration in episodic learning stage
         """
         # new add-on
         # Decouple the two dataset_dicts when in copy-paste mode
         if isinstance(dataset_dict, list):
             assert len(dataset_dict) == 2
             dataset_dict, dataset_dict2 = dataset_dict
-        dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
+        # it will be modified by code below
+        dataset_dict = copy.deepcopy(dataset_dict)
 
         image = self._read_image(dataset_dict, format=self.img_format)
 
@@ -82,34 +74,34 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
         if "annotations" in dataset_dict:
             anno = dataset_dict["annotations"]
 
-        if self.copy_paste_aug:
-            # Prepare the second sample for pasting
-            image2 = self._read_image(dataset_dict2, format=self.img_format)
-            if not self.backfill_size:
-                utils.check_image_size(dataset_dict2, image2)
+        # if self.copy_paste_aug:
+        #     # Prepare the second sample for pasting
+        # image2 = self._read_image(dataset_dict2, format=self.img_format)
+        # if not self.backfill_size:
+        #     utils.check_image_size(dataset_dict2, image2)
 
-            image2, dataset_dict2 = self._custom_transform(image2, dataset_dict2)
+        # image2, dataset_dict2 = self._custom_transform(
+        #     image2, dataset_dict2)
 
-            # Annotation of the dataset dict
-            anno2 = dataset_dict2["annotations"]
+        # # Annotation of the dataset dict
+        # anno2 = dataset_dict2["annotations"]
 
-            # Construct AugDualInput object for CopyPaste augmentation
-            inputs = AugDualInput(
-                image,
-                anno=anno,
-                image_b=image2,
-                anno_b=anno2,
-            )
-        else:
-            inputs = AugInput(image)
+        # # Construct AugDualInput object for CopyPaste augmentation
+        # inputs = AugDualInput(
+        #     image,
+        #     anno=anno,
+        #     image_b=image2,
+        #     anno_b=anno2,
+        # )
+        # else:
 
-        # inputs = AugInput(image=image)
+        inputs = AugInput(image)
         if "annotations" not in dataset_dict:
             transforms = AugmentationList(
                 ([self.crop_gen] if self.crop_gen else []) + self.tfm_gens
             )(inputs)
-            # Cache identical transforms in dataset_dict for subclass mappers
-            dataset_dict["transforms"] = transforms
+            # # Cache identical transforms in dataset_dict for subclass mappers
+            # dataset_dict["transforms"] = transforms
             image = inputs.image
         else:
             # pass additional arguments, will only be used when the Augmentation
@@ -128,7 +120,12 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
             image = inputs.image
             if self.crop_gen:
                 transforms = crop_tfm + transforms
-        image_shape = image.shape[:2]  # h, w
+        # Cache identical transforms in dataset_dict for subclass mappers
+        # TODO T122215878 Find more explicit way to expose transforms used
+        # h, w
+        dataset_dict["transforms"] = transforms
+
+        image_shape = image.shape[:2]
         if image.ndim == 2:
             image = np.expand_dims(image, 2)
         dataset_dict["image"] = torch.as_tensor(
@@ -149,9 +146,7 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
             return dataset_dict
         if "annotations" in dataset_dict:
             for anno in dataset_dict["annotations"]:
-                # Avoid discarding the masks when copy-paste enabled
-                # since copy-paste need the masks to blend images and masks
-                if not (self.mask_on or self.copy_paste_aug):
+                if not self.mask_on:
                     anno.pop("segmentation", None)
                 if not self.keypoint_on:
                     anno.pop("keypoints", None)
@@ -159,7 +154,7 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
             # Use the d2go version of transform_instances_annotations() to update occlusion
             # label of keypoints and the masks.
             annos = [
-                d2go_detection_utils.transform_instance_annotations(
+                utils.transform_instance_annotations(
                     obj,
                     transforms,
                     image_shape,
@@ -170,10 +165,10 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
             ]
 
             # Transforms the second template sample to paste onto the background
-            if self.copy_paste_aug and not isinstance(transforms[0], T.NoOpTransform):
+            if not isinstance(transforms[0], T.NoOpTransform):
                 # Concatenate the original annotations and the pasted annotations
                 annos2 = [
-                    d2go_detection_utils.transform_instance_annotations(
+                    utils.transform_instance_annotations(
                         obj,
                         transforms[1:],
                         image_shape,
@@ -194,15 +189,14 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
             dataset_dict["instances"] = utils.filter_empty_instances(instances)
 
         if "sem_seg_file_name" in dataset_dict:
-            if self.copy_paste_aug:
-                raise NotImplementedError(
-                    "Copy-paste aug not implemented for semantic seg."
-                )
             sem_seg_gt = read_image_with_prefetch(
                 dataset_dict.pop("sem_seg_file_name"),
                 "L",
-                prefetched=dataset_dict.get(PREFETCHED_SEM_SEG_FILE_NAME, None),
-            ).squeeze(2)
+                prefetched=dataset_dict.get(
+                    PREFETCHED_SEM_SEG_FILE_NAME, None),
+            )
+            if len(sem_seg_gt.shape) > 2:
+                sem_seg_gt = sem_seg_gt.squeeze(2)
             sem_seg_gt = transforms.apply_segmentation(sem_seg_gt)
             sem_seg_gt = torch.as_tensor(sem_seg_gt.astype("long"))
             dataset_dict["sem_seg"] = sem_seg_gt
@@ -246,16 +240,17 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
                 mapped_data = self._original_call_per_item(data)
                 # print(f"mapped data: {mapped_data}, len instances: {len(mapped_data['instances'])}")
                 # non_empty_boxes = mapped_data["instances"].gt_boxes.nonempty(threshold=1e-5)
-                if len(mapped_data["instances"])!=0:
+                if len(mapped_data["instances"]) != 0:
                     mapped_data_list.append(mapped_data)
                 else:
                     numer_of_empty_instances += 1
             # print(f"entering support set: {numer_of_empty_instances}")
             if numer_of_empty_instances > 0:
-                repeat_data_list = copy.deepcopy(np.random.choice(mapped_data_list, numer_of_empty_instances, replace=True))
+                repeat_data_list = copy.deepcopy(np.random.choice(
+                    mapped_data_list, numer_of_empty_instances, replace=True))
                 mapped_data_list.extend(repeat_data_list)
             assert len(mapped_data_list) == len(dataset_dict["support_set"])
-            mapped_dataset_dict["support_set"]= mapped_data_list
+            mapped_dataset_dict["support_set"] = mapped_data_list
             # print(f"mapped_data_list: {len(mapped_data_list)}")
 
         if "query_set" in dataset_dict:
