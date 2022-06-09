@@ -17,7 +17,7 @@ from d2go.data.transforms.build import build_transform_gen
 from d2go.data.utils import maybe_subsample_n_images
 from d2go.modeling import kmeans_anchors, model_ema
 # from d2go.projects.adet.adet_runner import AdelaiDetRunner
-
+from sylph.runner.adet_runner import AdelaiDetRunner
 # @manual=//mobile-vision/d2go/d2go:d2go
 from d2go.runner.default_runner import _get_tbx_writer, GeneralizedRCNNRunner
 from d2go.utils.flop_calculator import add_print_flops_callback
