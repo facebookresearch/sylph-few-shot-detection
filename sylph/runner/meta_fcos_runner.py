@@ -8,8 +8,7 @@ from typing import Dict, Any
 # @manual=//mobile-vision/d2go/d2go:d2go
 import d2go.utils.abnormal_checker as abnormal_checker
 import detectron2.utils.comm as comm
-import egodet.data.dataset_mappers  # noqa
-import egodet.data.transform  # noqa
+# import egodet.data.transform  # noqa
 import numpy as np
 import torch
 from d2go.config import temp_defrost
@@ -17,7 +16,7 @@ from d2go.data.dataset_mappers import build_dataset_mapper
 from d2go.data.transforms.build import build_transform_gen
 from d2go.data.utils import maybe_subsample_n_images
 from d2go.modeling import kmeans_anchors, model_ema
-from d2go.projects.adet.adet_runner import AdelaiDetRunner
+# from d2go.projects.adet.adet_runner import AdelaiDetRunner
 
 # @manual=//mobile-vision/d2go/d2go:d2go
 from d2go.runner.default_runner import _get_tbx_writer, GeneralizedRCNNRunner
@@ -80,6 +79,8 @@ from sylph.runner.default_configs import (
 logger = logging.getLogger(__name__)
 
 # TODO: rename this to DefaultFewShotRunner
+
+
 class MetaFCOSRunner(AdelaiDetRunner):
     """
     * inject coco datasets to support meta-learning
@@ -110,11 +111,11 @@ class MetaFCOSRunner(AdelaiDetRunner):
         logger.info(f"Evaluator type: {evaluator_type}")
         if evaluator_type == "coco_meta_learn":
             return COCO_OWD_Evaluator(
-                    dataset_name=dataset_name,
-                    output_dir=output_folder,
-                    kpt_oks_sigmas=cfg.TEST.KEYPOINT_OKS_SIGMAS,
-                    use_fast_impl=False,
-                    agnostic_eval=cfg.MODEL.PROPOSAL_GENERATOR.OWD,
+                dataset_name=dataset_name,
+                output_dir=output_folder,
+                kpt_oks_sigmas=cfg.TEST.KEYPOINT_OKS_SIGMAS,
+                use_fast_impl=False,
+                agnostic_eval=cfg.MODEL.PROPOSAL_GENERATOR.OWD,
             )
             """if cfg.MODEL.PROPOSAL_GENERATOR.OWD:
                 return COCO_OWD_Evaluator(
@@ -161,7 +162,8 @@ class MetaFCOSRunner(AdelaiDetRunner):
         if comm.is_main_process():
             data_loader_type = EpisodicLearningDataLoaderVisWrapper
             if data_loader_type is not None:
-                tbx_writer = _get_tbx_writer(get_tensorboard_log_dir(cfg.OUTPUT_DIR))
+                tbx_writer = _get_tbx_writer(
+                    get_tensorboard_log_dir(cfg.OUTPUT_DIR))
                 data_loader = data_loader_type(cfg, tbx_writer, dataloader)
             return data_loader
         return dataloader
@@ -175,8 +177,10 @@ class MetaFCOSRunner(AdelaiDetRunner):
                 dataset_name
             )
         )
-        mapper = cls.get_few_shot_test_mapper(cfg, is_train=False, need_annotation=True)
-        logger.info("Using dataset mapper:\n{} in testing support set".format(mapper))
+        mapper = cls.get_few_shot_test_mapper(
+            cfg, is_train=False, need_annotation=True)
+        logger.info(
+            "Using dataset mapper:\n{} in testing support set".format(mapper))
         return build_meta_detection_test_support_set_loader(
             cfg, dataset_name, mapper=mapper, meta_test_seed=meta_test_seed
         )
@@ -190,8 +194,10 @@ class MetaFCOSRunner(AdelaiDetRunner):
                 dataset_name
             )
         )
-        mapper = cls.get_few_shot_test_mapper(cfg, is_train=False, need_annotation=True)
-        logger.info("Using dataset mapper:\n{} in testing support set".format(mapper))
+        mapper = cls.get_few_shot_test_mapper(
+            cfg, is_train=False, need_annotation=True)
+        logger.info(
+            "Using dataset mapper:\n{} in testing support set".format(mapper))
         return build_meta_detection_test_support_set_base_loader(
             cfg, dataset_name, mapper=mapper
         )
@@ -211,7 +217,8 @@ class MetaFCOSRunner(AdelaiDetRunner):
             need_annotation=True,  # Set true to see the testing loss
         )
 
-        logger.info("Using dataset mapper:\n{} in testing query images".format(mapper))
+        logger.info(
+            "Using dataset mapper:\n{} in testing query images".format(mapper))
         return build_detection_test_loader(cfg, dataset_name, mapper=mapper)
 
     def _weight_preprocess(self, cfg):
@@ -250,7 +257,8 @@ class MetaFCOSRunner(AdelaiDetRunner):
                 filtered_model[key] = value
         filtered_model = OrderedDict(filtered_model)
         filtered_model = {"model": filtered_model}
-        logger.info(f"After filtering, the model: {filtered_model['model'].keys()}")
+        logger.info(
+            f"After filtering, the model: {filtered_model['model'].keys()}")
         # save path
         save_path = weight_path.split("://")
         if len(save_path) == 2:
@@ -320,7 +328,8 @@ class MetaFCOSRunner(AdelaiDetRunner):
             if not cfg.ABNORMAL_CHECKER.ENABLED:
                 return model
 
-            tbx_writer = _get_tbx_writer(get_tensorboard_log_dir(cfg.OUTPUT_DIR))
+            tbx_writer = _get_tbx_writer(
+                get_tensorboard_log_dir(cfg.OUTPUT_DIR))
             writers = abnormal_checker.get_writers(cfg, tbx_writer)
             checker = abnormal_checker.AbnormalLossChecker(start_iter, writers)
             ret = abnormal_checker.AbnormalLossCheckerWrapper(model, checker)
@@ -343,11 +352,13 @@ class MetaFCOSRunner(AdelaiDetRunner):
                 lambda: self.do_test(cfg, model, train_iter=trainer.iter),
             ),
             kmeans_anchors.compute_kmeans_anchors_hook(self, cfg),
-            self._create_qat_hook(cfg) if cfg.QUANTIZATION.QAT.ENABLED else None,
+            self._create_qat_hook(
+                cfg) if cfg.QUANTIZATION.QAT.ENABLED else None,
         ]
 
         if comm.is_main_process():
-            tbx_writer = _get_tbx_writer(get_tensorboard_log_dir(cfg.OUTPUT_DIR))
+            tbx_writer = _get_tbx_writer(
+                get_tensorboard_log_dir(cfg.OUTPUT_DIR))
             writers = [
                 CommonMetricPrinter(max_iter),
                 JSONWriter(os.path.join(cfg.OUTPUT_DIR, "metrics.json")),
@@ -368,11 +379,12 @@ class MetaFCOSRunner(AdelaiDetRunner):
         Gather class code from different processes.
         """
         if get_world_size() > 1:
-            all_gather_class_codes_list = [None for _ in range(get_world_size())]
+            all_gather_class_codes_list = [
+                None for _ in range(get_world_size())]
             torch.distributed.all_gather_object(
                 all_gather_class_codes_list, sub_class_codes
             )
-            out_codes =  [
+            out_codes = [
                 cls_code
                 for sub_cls_codes in all_gather_class_codes_list
                 for cls_code in sub_cls_codes
@@ -417,7 +429,8 @@ class MetaFCOSRunner(AdelaiDetRunner):
             return out_codes
         # print(f"code before reduce: {out_codes}")
         # reduce
-        logger.info(f"gathered code dim: {out_codes[0]['class_code']['cls_bias'].size()}")
+        logger.info(
+            f"gathered code dim: {out_codes[0]['class_code']['cls_bias'].size()}")
         return reduce_class_code(out_codes)
 
     def do_train(self, cfg, model, resume):
@@ -437,7 +450,8 @@ class MetaFCOSRunner(AdelaiDetRunner):
         assert len(cfg.DATASETS.TEST)
         assert cfg.OUTPUT_DIR
 
-        is_final = (train_iter is None) or (train_iter == cfg.SOLVER.MAX_ITER - 1)
+        is_final = (train_iter is None) or (
+            train_iter == cfg.SOLVER.MAX_ITER - 1)
 
         logger.info(
             f"Running evaluation for model tag {model_tag} at iter {train_iter}..."
@@ -459,7 +473,7 @@ class MetaFCOSRunner(AdelaiDetRunner):
         results[model_tag] = OrderedDict()
         print(f"model tag: {model_tag}, train_iter: {train_iter}")
         num_repeat_test = 1
-        if is_final: # start the multiple tests at the final round
+        if is_final:  # start the multiple tests at the final round
             num_repeat_test = cfg.TEST.REPEAT_TEST
         test_AP_history = defaultdict(list)  # used to cal the vairance
         for seed in range(num_repeat_test):
@@ -481,7 +495,8 @@ class MetaFCOSRunner(AdelaiDetRunner):
                 # -----change    start------------
                 # register class codes
                 classes = MetadataCatalog.get(dataset_name).thing_classes
-                id_map = MetadataCatalog.get(dataset_name).thing_dataset_id_to_contiguous_id
+                id_map = MetadataCatalog.get(
+                    dataset_name).thing_dataset_id_to_contiguous_id
                 class_codes = None
                 if not eval_with_pretrained_code:
                     val_support_set_loader = (
@@ -493,17 +508,23 @@ class MetaFCOSRunner(AdelaiDetRunner):
                     sub_class_codes = inference_on_support_set_dataset(
                         model, val_support_set_loader, output_dir=output_folder
                     )
-                    few_shot_class_codes = self._gather_class_code(sub_class_codes)
+                    few_shot_class_codes = self._gather_class_code(
+                        sub_class_codes)
                     # logger.info(f"few_shot_class_codes: {few_shot_class_codes}")
                     # print(f"few_shot_class_codes: {few_shot_class_codes}")
                     if cfg.MODEL.META_LEARN.USE_ALL_GTS_IN_BASE_CLASSES:
-                        #TODO: build the base support set loader
+                        # TODO: build the base support set loader
                         train_dataset_name = cfg.DATASETS.TRAIN[0]
-                        base_id_map = MetadataCatalog.get(train_dataset_name).thing_dataset_id_to_contiguous_id
-                        base_support_set_loader = self.build_episodic_learning_detection_test_support_set_base_loader(cfg, dataset_name)
-                        base_sub_class_codes = inference_on_support_set_dataset_base(model=model, data_loader=base_support_set_loader, all_id_map=id_map, base_id_map=base_id_map, output_dir=output_folder)
-                        base_class_codes = self._gather_class_code(base_sub_class_codes, reduce=True)
-                        class_codes = replace_class_code(few_shot_class_codes, base_class_codes, device=model.device)
+                        base_id_map = MetadataCatalog.get(
+                            train_dataset_name).thing_dataset_id_to_contiguous_id
+                        base_support_set_loader = self.build_episodic_learning_detection_test_support_set_base_loader(
+                            cfg, dataset_name)
+                        base_sub_class_codes = inference_on_support_set_dataset_base(
+                            model=model, data_loader=base_support_set_loader, all_id_map=id_map, base_id_map=base_id_map, output_dir=output_folder)
+                        base_class_codes = self._gather_class_code(
+                            base_sub_class_codes, reduce=True)
+                        class_codes = replace_class_code(
+                            few_shot_class_codes, base_class_codes, device=model.device)
                     else:
                         class_codes = few_shot_class_codes
                     # normalize class codes
@@ -567,11 +588,14 @@ class MetaFCOSRunner(AdelaiDetRunner):
                 )
                 # -----change    ends------------
                 if comm.is_main_process():
-                    results[f"seed{seed}"][dataset_name] = results_per_dataset # results write to tensorboard
-                    test_AP_history[dataset_name].append(results_per_dataset["bbox"]["AP"])
+                    # results write to tensorboard
+                    results[f"seed{seed}"][dataset_name] = results_per_dataset
+                    test_AP_history[dataset_name].append(
+                        results_per_dataset["bbox"]["AP"])
                     if seed == 0:
                         # init
-                        results[model_tag][dataset_name] = deepcopy(results_per_dataset)
+                        results[model_tag][dataset_name] = deepcopy(
+                            results_per_dataset)
                     else:
                         for k in results[model_tag][dataset_name]["bbox"]:
                             results[model_tag][dataset_name]["bbox"][
@@ -592,12 +616,14 @@ class MetaFCOSRunner(AdelaiDetRunner):
                                         averaged_ap[k].append(v)
                             for k, lst in averaged_ap.items():
                                 ap_history = np.array(lst)
-                                results[model_tag][dataset_name]["bbox"][f"{k}_avg"] = ap_history.mean()
-                                results[model_tag][dataset_name]["bbox"][f"{k}_std"] = ap_history.std()
-                        print(f"[{model_tag}]-[{dataset_name}]-{results[model_tag][dataset_name]}")
+                                results[model_tag][dataset_name]["bbox"][f"{k}_avg"] = ap_history.mean(
+                                )
+                                results[model_tag][dataset_name]["bbox"][f"{k}_std"] = ap_history.std(
+                                )
+                        print(
+                            f"[{model_tag}]-[{dataset_name}]-{results[model_tag][dataset_name]}")
                         # print the averaged result
                         print_csv_format(results[model_tag][dataset_name])
-
 
                 if is_final and cfg.TEST.AUG.ENABLED:
                     # In the end of training, run an evaluation with TTA
@@ -606,7 +632,8 @@ class MetaFCOSRunner(AdelaiDetRunner):
                         cfg.OUTPUT_DIR, "inference_TTA", dataset_name, seed
                     )
 
-                    logger.info("Running inference with test-time augmentation ...")
+                    logger.info(
+                        "Running inference with test-time augmentation ...")
                     data_loader = self.build_detection_test_loader(
                         cfg, dataset_name, mapper=lambda x: x
                     )
@@ -614,7 +641,8 @@ class MetaFCOSRunner(AdelaiDetRunner):
                         cfg, dataset_name, output_folder=output_folder
                     )
                     inference_on_dataset(
-                        GeneralizedRCNNWithTTA(cfg, model), data_loader, evaluator
+                        GeneralizedRCNNWithTTA(
+                            cfg, model), data_loader, evaluator
                     )
 
         if is_final and cfg.TEST.EXPECTED_RESULTS and comm.is_main_process():
@@ -627,11 +655,14 @@ class MetaFCOSRunner(AdelaiDetRunner):
 
             flattened_results = flatten_results_dict(results)
             for k, v in flattened_results.items():
-                tbx_writer = _get_tbx_writer(get_tensorboard_log_dir(cfg.OUTPUT_DIR))
-                tbx_writer._writer.add_scalar("eval_{}".format(k), v, train_iter)
+                tbx_writer = _get_tbx_writer(
+                    get_tensorboard_log_dir(cfg.OUTPUT_DIR))
+                tbx_writer._writer.add_scalar(
+                    "eval_{}".format(k), v, train_iter)
 
         if comm.is_main_process():
-            tbx_writer = _get_tbx_writer(get_tensorboard_log_dir(cfg.OUTPUT_DIR))
+            tbx_writer = _get_tbx_writer(
+                get_tensorboard_log_dir(cfg.OUTPUT_DIR))
             tbx_writer._writer.flush()
         return results
 
@@ -669,7 +700,8 @@ class MetaFCOSRunner(AdelaiDetRunner):
             for dataset_name in results[model_tag].keys():
                 # for  results[model_tag][dataset_name]["bbox"]
                 dataset_split = dataset_name.split('_')
-                assert len(dataset_split) > 3, logger.info("data split is less than 4")
+                assert len(dataset_split) > 3, logger.info(
+                    "data split is less than 4")
                 class_split = dataset_split[3]
                 if class_split != "all":
                     continue
@@ -677,6 +709,7 @@ class MetaFCOSRunner(AdelaiDetRunner):
                 base_classes = cfg.DATASETS.BASE_CLASSES_SPLIT
                 novel_classes = cfg.DATASETS.NOVEL_CLASSES_SPLIT
                 base_classes = MetadataCatalog.get(base_classes).thing_classes
-                novel_classes = MetadataCatalog.get(novel_classes).thing_classes
+                novel_classes = MetadataCatalog.get(
+                    novel_classes).thing_classes
 
                 #

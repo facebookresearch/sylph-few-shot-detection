@@ -17,8 +17,11 @@ source env/bin/activate
 
 Install dependencies:
 ```
+pip install torch
 pip3 install -r requirements.txt --find-links https://download.pytorch.org/whl/nightly/cu102/torch_nightly.html
 ```
+
+Note: if direct one step installation does not work, try to install everything in `requirements.txt` separately.
 
 Install d2go separately. Follow the instruction here: https://github.com/facebookresearch/d2go/blob/main/README.md. Use `python setup.py install`.
 
@@ -57,7 +60,7 @@ Pretraining
 ```
 
 ```
-python3 train_net.py --runner sylph.runner.MetaFCOSRunner \\n  --config "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml" --num-processes 3 \\n  --output-dir output/meta-fcos/coco/meta-train/WS_iFSD_imagenet1000x100gt 
+python3 train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml" --num-processes 3 \\n  --output-dir output/meta-fcos/coco/meta-train/WS_iFSD_imagenet1000x100gt 
 ```
 
 Meta-learning

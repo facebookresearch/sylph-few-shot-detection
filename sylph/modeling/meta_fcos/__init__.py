@@ -12,8 +12,8 @@ Two steps:
 * use clas logits and support set gt instances to adapt the loss
 """
 
-from .fcos import MetaFCOS # noqa
-from .fast_rcnn_predictor_head import BiStandardROIHeads # noqa
+from .fcos import MetaFCOS  # noqa
+# from .fast_rcnn_predictor_head import BiStandardROIHeads # noqa
 
 # a = [{'support_set': [{'file_name': 'memcache_manifold://fair_vision_data/tree/coco_train2017/000000110442.jpg', 'height': 640, 'width': 480, 'not_exhaustive_category_ids': [], 'neg_category_ids': [498, 27, 1077, 242, 156, 449, 556], 'image_id': 110442, 'image': tensor([[[172., 175., 179.,  ..., 255., 255., 255.],
 #          [175., 175., 176.,  ..., 255., 255., 255.],

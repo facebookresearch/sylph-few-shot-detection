@@ -2,3 +2,4 @@ env/
 logs/
 **/output*/
 d2go/
+*.egg-info

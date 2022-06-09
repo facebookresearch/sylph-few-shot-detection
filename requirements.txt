@@ -1,5 +1,6 @@
-torch==1.8.*
+torch
 torchvision
+lvis
 
 git+https://github.com/aim-uofa/AdelaiDet.git@master#egg=AdelaiDet
 git+https://github.com/facebookresearch/detectron2.git@main#egg=detectron2
