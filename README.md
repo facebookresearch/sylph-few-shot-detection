@@ -50,6 +50,25 @@ Specify    `--config-file` and `--runner` in `tools/run.py`.
 `configs="sylph://LVIS-Meta-FCOS-Detection/Meta_FCOS_MS_R_50_1x.yaml"`
 
 # Prepare data
+## Expected dataset structure for COCO:
+```
+coco/
+  annotations/
+    instances_{train,val}2014.json
+  {train,val}2014/
+    # image files that are mentioned in the corresponding json
+```
+
+## Expected dataset structure for LVIS:
+```
+coco/
+  {train,val}2017/
+lvis/
+  lvis_v0.5_{train,val}.json
+  lvis_v0.5_train_{freq,common,rare}.json
+```
+
+LVIS uses the same images and annotation format as COCO. You can use [split_lvis_annotation.py](split_lvis_annotation.py) to split `lvis_v0.5_train.json` into `lvis_v0.5_train_{freq,common,rare}.json`.
 # Train
 ## Command
 Under folder  `sylph/tools`. Run `run.py`. Main change includes: `--config-file`, `--runner`.
