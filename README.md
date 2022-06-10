@@ -49,6 +49,7 @@ Specify    `--config-file` and `--runner` in `tools/run.py`.
 # Config files
 `configs="sylph://LVIS-Meta-FCOS-Detection/Meta_FCOS_MS_R_50_1x.yaml"`
 
+# Prepare data
 # Train
 ## Command
 Under folder  `sylph/tools`. Run `run.py`. Main change includes: `--config-file`, `--runner`.
@@ -60,7 +61,7 @@ Pretraining
 ```
 
 ```
-python3 train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml" --num-processes 3 \\n  --output-dir output/meta-fcos/coco/meta-train/WS_iFSD_imagenet1000x100gt 
+python3 train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml" --num-processes 3 \\n  --output-dir output/meta-fcos/coco/meta-train/WS_iFSD_imagenet1000x100gt 
 ```
 
 Meta-learning

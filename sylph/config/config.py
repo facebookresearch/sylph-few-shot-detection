@@ -25,10 +25,10 @@ def reroute_config_path(path: str) -> str:
     path = _reroute_config_path(path)
 
     if path.startswith("sylph://"):
-        rel_path = path[len("sylph://") :]
+        rel_path = path[len("sylph://"):]
 
         config_in_resource = pkg_resources.resource_filename(
-            "sylph.model_zoo", os.path.join("configs", rel_path)
+            "sylph", os.path.join("configs", rel_path)
         )
         return config_in_resource
     return path

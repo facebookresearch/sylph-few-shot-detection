@@ -24,8 +24,12 @@ from sylph.data.data_injection.meta_coco import register_meta_learn_coco
 from sylph.data.data_injection.meta_lvis import register_meta_learn_lvis
 from sylph.data.data_injection.meta_tao import register_meta_learn_tao
 
+# JSON_ANNOTATIONS_DIR = (
+#     "manifold://fair_vision_data/tree/detectron2/json_dataset_annotations/"
+# )
+
 JSON_ANNOTATIONS_DIR = (
-    "manifold://fair_vision_data/tree/detectron2/json_dataset_annotations/"
+    "coco/annotations/"
 )
 
 logger = logging.getLogger(__name__)
@@ -59,7 +63,8 @@ def register_all_coco_meta_learn(
             "coco/instances_train2017.json",  # json file, will add it to annotation_dir later
         ),
         (
-            "coco_pretrain_finetune_novel",  # finetune, used in TFA simplified finetune stage, use only novel categories
+            # finetune, used in TFA simplified finetune stage, use only novel categories
+            "coco_pretrain_finetune_novel",
             "memcache_manifold://fair_vision_data/tree/coco_train2017",  # image root
             "coco/instances_train2017.json",  # json file, will add it to annotation_dir later
         ),
@@ -86,28 +91,34 @@ def register_all_coco_meta_learn(
         ),
         (
             "coco_meta_train_base",  # meta training, trains stage, only 60 base classes
-            "memcache_manifold://fair_vision_data/tree/coco_train2017",  # image root for both support set and query set
+            # image root for both support set and query set
+            "memcache_manifold://fair_vision_data/tree/coco_train2017",
             None,  # json file, will add in load_few_shot_coco_json
         ),
         # meta-finetune all classes # novel classes only 10 shots
         (
-            "coco_meta_train_all",  # meta training, trains stage, all 80 classes, but for novel set, will only sample a few
-            "memcache_manifold://fair_vision_data/tree/coco_train2017",  # image root for both support set and query set
+            # meta training, trains stage, all 80 classes, but for novel set, will only sample a few
+            "coco_meta_train_all",
+            # image root for both support set and query set
+            "memcache_manifold://fair_vision_data/tree/coco_train2017",
             None,  # json file, will add in load_few_shot_coco_json
         ),
         (
             "coco_meta_val_novel",  # meta training, validation stage, use 20 novel classes
-            "memcache_manifold://fair_vision_data/tree/coco_train2017",  # image root for support set
+            # image root for support set
+            "memcache_manifold://fair_vision_data/tree/coco_train2017",
             None,  # cant be none for evaluator, later we dynamically generate
         ),
         (
             "coco_meta_val_base",  # meta training, validation stage, use 60 base classes
-            "memcache_manifold://fair_vision_data/tree/coco_train2017",  # image root for support set
+            # image root for support set
+            "memcache_manifold://fair_vision_data/tree/coco_train2017",
             None,  # cant be none for evaluator, later we dynamically generate
         ),
         (
             "coco_meta_val_all",
-            "memcache_manifold://fair_vision_data/tree/coco_train2017",  # image root for support set
+            # image root for support set
+            "memcache_manifold://fair_vision_data/tree/coco_train2017",
             None,  # cant be none for evaluator, later we dynamically generate
         ),
     ]
@@ -164,7 +175,8 @@ def register_all_lvis_meta_learn(
     METASPLITS = []
     # register pretrain datasets
     for data_split in datasplit_categories.keys():
-        for training_stage in ["train", "val", "finetune"]: # add TFA finetune stage, it samples images
+        # add TFA finetune stage, it samples images
+        for training_stage in ["train", "val", "finetune"]:
             dataset_name = f"lvis_pretrain_{training_stage}_{data_split}"
             json_file = f"lvis/lvis_v1_{training_stage}.json" if training_stage != "finetune" else "lvis/lvis_v1_train.json"
             METASPLITS.append((dataset_name, lvis_image_root, json_file))
@@ -197,7 +209,8 @@ def register_all_lvis_meta_learn(
 
         # Added for evaluator purpose
         if "meta_val" in name:
-            new_annofile = os.path.join(JSON_ANNOTATIONS_DIR, "lvis/lvis_v1_val.json")
+            new_annofile = os.path.join(
+                JSON_ANNOTATIONS_DIR, "lvis/lvis_v1_val.json")
 
         if new_annofile is not None:
             MetadataCatalog.get(name).set(

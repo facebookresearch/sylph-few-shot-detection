@@ -3,3 +3,4 @@ logs/
 **/output*/
 d2go/
 *.egg-info
+datasets/

@@ -9,6 +9,8 @@ import time
 from typing import Optional
 
 import detectron2.utils.comm as comm
+from detectron2.config import set_global_cfg
+
 import torch
 from d2go.config import (
     auto_scale_world_size,
@@ -166,18 +168,25 @@ def prepare_for_launch(args):
             priority than cfg.OUTPUT_DIR.
     """
     logger.info(args)
+
     runner = create_runner(args.runner)
+    logger.info("Using runner: {}\n".format(runner))
 
     cfg = runner.get_default_cfg()
+    # base_cfg = create_cfg(cfg,
+    #                       config_file, pre_training_opts)
 
     if args.config_file:
         with PathManager.open(reroute_config_path(args.config_file), "r") as f:
             print("Loaded config file {}:\n{}".format(
                 args.config_file, f.read()))
         cfg.merge_from_file(args.config_file)
+        # print(cfg)
         cfg.merge_from_list(args.opts)
     else:
         cfg = create_cfg_from_cli_args(args, default_cfg=cfg)
+    set_global_cfg(cfg)
+
     cfg.freeze()
 
     assert args.output_dir or args.config_file

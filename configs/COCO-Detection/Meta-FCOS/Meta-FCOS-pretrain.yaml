@@ -41,7 +41,7 @@ D2GO_DATA:
       'ResizeScaleOp::{"min_scale": 0.1, "max_scale": 2.0, "target_height": 1024, "target_width": 1024}',
       "RandomFlipOp",
       'FixedSizeCropOp::{"crop_size": [1024, 1024]}',
-      'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}',
+      # 'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}', # TODO: internal
     ]
     TEST: ["ResizeShortestEdgeOp"]
 

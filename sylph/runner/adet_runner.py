@@ -1,7 +1,8 @@
 import logging
 
 import adet.config.defaults as adet_config_defaults
-from adet.config.defaults import add_adet_config
+# from adet.config.defaults import add_adet_config
+from sylph.runner.adet_configs import add_adet_config
 from d2go.runner.default_runner import GeneralizedRCNNRunner
 
 
@@ -19,4 +20,3 @@ class AdelaiDetRunner(GeneralizedRCNNRunner):
 
         add_adet_config(_C)
         return _C
-    
