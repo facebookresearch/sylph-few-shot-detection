@@ -11,7 +11,9 @@ import detectron2.utils.comm as comm
 import torch
 # from classy_vision.fb.generic.util import initialize_logger
 from d2go.distributed import launch
-from d2go.setup import (
+
+# change this to use customized setup.py
+from setup import (
     basic_argument_parser,
     post_mortem_if_fail_for_main,
     prepare_for_launch,
@@ -19,12 +21,13 @@ from d2go.setup import (
 )
 from d2go.utils.misc import print_metrics_table, dump_trained_model_configs
 from detectron2.engine.defaults import create_ddp_model
+from sylph.config.config import CfgNode  # noqa
 
 logger = logging.getLogger(__name__)
 
 
 def main(
-    cfg,
+    cfg: CfgNode,
     output_dir,
     runner=None,
     eval_only=False,
@@ -39,11 +42,13 @@ def main(
     logger.info("Model:\n{}".format(model))
 
     if eval_only:
-        checkpointer = runner.build_checkpointer(cfg, model, save_dir=output_dir)
+        checkpointer = runner.build_checkpointer(
+            cfg, model, save_dir=output_dir)
         # checkpointer.resume_or_load() will skip all additional checkpointable
         # which may not be desired like ema states
         if resume and checkpointer.has_checkpoint():
-            checkpoint = checkpointer.resume_or_load(cfg.MODEL.WEIGHTS, resume=resume)
+            checkpoint = checkpointer.resume_or_load(
+                cfg.MODEL.WEIGHTS, resume=resume)
         else:
             checkpoint = checkpointer.load(cfg.MODEL.WEIGHTS)
         train_iter = checkpoint.get("iteration", None)
@@ -59,7 +64,8 @@ def main(
     model = create_ddp_model(
         model,
         fp16_compression=cfg.MODEL.DDP_FP16_GRAD_COMPRESS,
-        device_ids=None if cfg.MODEL.DEVICE == "cpu" else [comm.get_local_rank()],
+        device_ids=None if cfg.MODEL.DEVICE == "cpu" else [
+            comm.get_local_rank()],
         broadcast_buffers=False,
         find_unused_parameters=cfg.MODEL.DDP_FIND_UNUSED_PARAMETERS,
     )
@@ -69,7 +75,8 @@ def main(
     print_metrics_table(metrics)
 
     # dump config files for trained models
-    trained_model_configs = dump_trained_model_configs(cfg.OUTPUT_DIR, trained_cfgs)
+    trained_model_configs = dump_trained_model_configs(
+        cfg.OUTPUT_DIR, trained_cfgs)
     return {
         # for e2e_workflow
         "accuracy": metrics,
