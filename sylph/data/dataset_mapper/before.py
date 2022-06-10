@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+import math
+from detectron2.data.samplers import RepeatFactorTrainingSampler
+from collections import defaultdict
 import copy
 import logging
 
@@ -13,9 +16,10 @@ from d2go.data.dataset_mappers.d2go_dataset_mapper import (
     PREFETCHED_SEM_SEG_FILE_NAME,
     read_image_with_prefetch,
 )
+from d2go.data.transforms.fb.copy_paste_augmentation import AugDualInput
 from detectron2.data import detection_utils as utils, transforms as T
 
-# from d2go.data.fb import detection_utils as d2go_detection_utils
+from d2go.data.fb import detection_utils as d2go_detection_utils
 
 from detectron2.data.transforms.augmentation import (
     AugInput,
@@ -29,8 +33,6 @@ logger = logging.getLogger(__name__)
 @D2GO_DATA_MAPPER_REGISTRY.register()
 class MetalearnDatasetMapper(D2GoDatasetMapper):
     """
-    Mostly the same with D2GoDatasetMapper, with the change of need_annotation.
-
     Map a dataset_dict which is a dict from
     "query_set" : 2-d list, c * sq
     "support_set": 2-d list, c * s
@@ -50,11 +52,20 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
         super().__init__(cfg, is_train, image_loader, tfm_gens)
         self.need_annotation = need_annotation
 
+        # if cfg.INPUT.CROP.ENABLED and is_train:
+        #     self.pre_crop_tfm_gens = self._prepare_pre_crop_augmentation(cfg, is_train)
+        #     self.crop_gen = T.RandomCrop(cfg.INPUT.CROP.TYPE, cfg.INPUT.CROP.SIZE)
+        #     logger.info(f"pre_crop_tfm_gens {self.pre_crop_tfm_gens}")
+        #     logger.info(f"crop_gen {self.crop_gen}")
+        # else:
+        #     self.pre_crop_tfm_gens = None
+        #     self.crop_gen = None
+
     def _original_call_per_item(self, dataset_dict):
         """
         Modified from d2go's _original_call in D2GoDatasetMapper. The only change is:
         self.need_annotation can happen regarding is_train or not. This is added for
-        generating support set while class registration in episodic learning stage
+        generating support set while class registration in episodic learning
         """
         # new add-on
         # Decouple the two dataset_dicts when in copy-paste mode
@@ -74,33 +85,34 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
         if "annotations" in dataset_dict:
             anno = dataset_dict["annotations"]
 
-        # if self.copy_paste_aug:
-        #     # Prepare the second sample for pasting
-        # image2 = self._read_image(dataset_dict2, format=self.img_format)
-        # if not self.backfill_size:
-        #     utils.check_image_size(dataset_dict2, image2)
+        if self.copy_paste_aug:
+            # Prepare the second sample for pasting
+            image2 = self._read_image(dataset_dict2, format=self.img_format)
+            if not self.backfill_size:
+                utils.check_image_size(dataset_dict2, image2)
 
-        # image2, dataset_dict2 = self._custom_transform(
-        #     image2, dataset_dict2)
+            image2, dataset_dict2 = self._custom_transform(
+                image2, dataset_dict2)
 
-        # # Annotation of the dataset dict
-        # anno2 = dataset_dict2["annotations"]
+            # Annotation of the dataset dict
+            anno2 = dataset_dict2["annotations"]
 
-        # # Construct AugDualInput object for CopyPaste augmentation
-        # inputs = AugDualInput(
-        #     image,
-        #     anno=anno,
-        #     image_b=image2,
-        #     anno_b=anno2,
-        # )
-        # else:
+            # Construct AugDualInput object for CopyPaste augmentation
+            inputs = AugDualInput(
+                image,
+                anno=anno,
+                image_b=image2,
+                anno_b=anno2,
+            )
+        else:
+            inputs = AugInput(image)
 
-        inputs = AugInput(image)
+        # inputs = AugInput(image=image)
         if "annotations" not in dataset_dict:
             transforms = AugmentationList(
                 ([self.crop_gen] if self.crop_gen else []) + self.tfm_gens
             )(inputs)
-            # # Cache identical transforms in dataset_dict for subclass mappers
+            # Cache identical transforms in dataset_dict for subclass mappers
             dataset_dict["transforms"] = transforms
             image = inputs.image
         else:
@@ -120,8 +132,7 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
             image = inputs.image
             if self.crop_gen:
                 transforms = crop_tfm + transforms
-
-        image_shape = image.shape[:2]
+        image_shape = image.shape[:2]  # h, w
         if image.ndim == 2:
             image = np.expand_dims(image, 2)
         dataset_dict["image"] = torch.as_tensor(
@@ -142,7 +153,9 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
             return dataset_dict
         if "annotations" in dataset_dict:
             for anno in dataset_dict["annotations"]:
-                if not self.mask_on:
+                # Avoid discarding the masks when copy-paste enabled
+                # since copy-paste need the masks to blend images and masks
+                if not (self.mask_on or self.copy_paste_aug):
                     anno.pop("segmentation", None)
                 if not self.keypoint_on:
                     anno.pop("keypoints", None)
@@ -150,7 +163,7 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
             # Use the d2go version of transform_instances_annotations() to update occlusion
             # label of keypoints and the masks.
             annos = [
-                utils.transform_instance_annotations(
+                d2go_detection_utils.transform_instance_annotations(
                     obj,
                     transforms,
                     image_shape,
@@ -161,20 +174,20 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
             ]
 
             # Transforms the second template sample to paste onto the background
-            # if not isinstance(transforms[0], T.NoOpTransform):
-            #     # Concatenate the original annotations and the pasted annotations
-            #     annos2 = [
-            #         utils.transform_instance_annotations(
-            #             obj,
-            #             transforms[1:],
-            #             image_shape,
-            #             keypoint_hflip_indices=self.keypoint_hflip_indices,
-            #         )
-            #         for obj in transforms[0].template_anno
-            #         if obj.get("iscrowd", 0) == 0
-            #     ]
-            #     # Combine the annotations
-            #     annos = annos + annos2
+            if self.copy_paste_aug and not isinstance(transforms[0], T.NoOpTransform):
+                # Concatenate the original annotations and the pasted annotations
+                annos2 = [
+                    d2go_detection_utils.transform_instance_annotations(
+                        obj,
+                        transforms[1:],
+                        image_shape,
+                        keypoint_hflip_indices=self.keypoint_hflip_indices,
+                    )
+                    for obj in transforms[0].template_anno
+                    if obj.get("iscrowd", 0) == 0
+                ]
+                # Combine the annotations
+                annos = annos + annos2
 
             instances = utils.annotations_to_instances(
                 annos, image_shape, mask_format=self.mask_format
@@ -185,14 +198,16 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
             dataset_dict["instances"] = utils.filter_empty_instances(instances)
 
         if "sem_seg_file_name" in dataset_dict:
+            if self.copy_paste_aug:
+                raise NotImplementedError(
+                    "Copy-paste aug not implemented for semantic seg."
+                )
             sem_seg_gt = read_image_with_prefetch(
                 dataset_dict.pop("sem_seg_file_name"),
                 "L",
                 prefetched=dataset_dict.get(
                     PREFETCHED_SEM_SEG_FILE_NAME, None),
-            )
-            if len(sem_seg_gt.shape) > 2:
-                sem_seg_gt = sem_seg_gt.squeeze(2)
+            ).squeeze(2)
             sem_seg_gt = transforms.apply_segmentation(sem_seg_gt)
             sem_seg_gt = torch.as_tensor(sem_seg_gt.astype("long"))
             dataset_dict["sem_seg"] = sem_seg_gt
@@ -257,3 +272,55 @@ class MetalearnDatasetMapper(D2GoDatasetMapper):
         # print(f"change with data aug: {mapped_dataset_dict}")
         # map the support_set_target
         return mapped_dataset_dict
+
+
+class SupportSetRepeatFactorTrainingSampler(RepeatFactorTrainingSampler):
+    """
+    Similar to TrainingSampler, but a sample may appear more times than others based
+    on its "repeat factor". This is suitable for training on class imbalanced datasets like LVIS.
+    """
+
+    @staticmethod
+    def repeat_factors_from_category_frequency(
+        dataset_dicts, repeat_thresh, num_categories
+    ):
+        """
+        Compute (fractional) per-category repeat factors based on category/annotation frequency.
+        The repeat factor for an image is a function of the frequency of the rarest
+        category labeled in that image. The "frequency of category c" in [0, 1] is defined
+        as the fraction of images in the training set (without repeats) in which category c
+        appears.
+        See :paper:`lvis` (>= v2) Appendix B.2.
+        Args:
+            dataset_dicts (list[list[dict]]): annotations in Detectron2 dataset format.
+            repeat_thresh (float): frequency threshold below which data is repeated.
+                If the frequency is half of `repeat_thresh`, the image will be
+                repeated twice.
+        Returns:
+            torch.Tensor:
+                the i-th element is the repeat factor for the dataset image at index i.
+        """
+        # 1. For each category c, compute the fraction of images that contain it: f(c)
+        category_count = defaultdict(float)
+        for i in range(num_categories):
+            category_count[i] = len(dataset_dicts[i])
+        num_annotations = sum(category_count.values())
+        category_freq = defaultdict(float)
+        for k, v in category_count.items():
+            category_freq[k] = v / num_annotations
+
+        # 2. For each category c, compute the category-level repeat factor:
+        #    r(c) = max(1, sqrt(t / f(c)))
+        category_rep = {
+            cat_id: math.sqrt(repeat_thresh / cat_freq) *
+            category_count[cat_id]
+            for cat_id, cat_freq in category_freq.items()
+        }
+        # smallest category_repeat_factor
+        smallest_repeat_factor = min(category_rep.values())
+
+        rep_factors = [
+            v / smallest_repeat_factor for v in category_rep.values()]
+        print(f"rep_factors: {rep_factors}")
+
+        return torch.tensor(rep_factors, dtype=torch.float32)

@@ -41,7 +41,7 @@ Meta-learning dataset name convention follows: [datasetname]_[train_stage]_[trai
 
 
 def register_all_coco_meta_learn(
-    few_shot_root="manifold://fai4ar/tree/datasets/coco_meta_learn",
+    # few_shot_root="manifold://fai4ar/tree/datasets/coco_meta_learn",
 ):
     """
     pretrain: the data loader needs to filter out novel classes
@@ -138,7 +138,7 @@ def register_all_coco_meta_learn(
             name=name,
             metadata=copy.deepcopy(metadata),
             imgdir=imgdir,
-            jsondir=few_shot_root,
+            # jsondir=few_shot_root,
             annofile=new_annofile,
         )
 

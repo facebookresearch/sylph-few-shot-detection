@@ -209,7 +209,7 @@ def _gen_dataset_dicts_ann_by_category(imgs_anns, image_root, id_map, sample_siz
     return record_dict
 
 
-def load_pretrain_coco_json(json_file, json_root, image_root, metadata, dataset_name):
+def load_pretrain_coco_json(json_file, image_root, metadata, dataset_name):
     logger.info(f"load_pretrain_coco_json: {json_file}")
 
     name, meta_training_stage, training_stage, split = dataset_name.split("_")
@@ -282,7 +282,7 @@ def load_pretrain_coco_json(json_file, json_root, image_root, metadata, dataset_
     return dataset_dicts
 
 
-def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_name):
+def load_few_shot_coco_json(json_file, image_root, metadata, dataset_name):
     """
     Load a json file with COCO's instances annotation format.
     Currently supports instance detection.
@@ -290,7 +290,6 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
         json_file (str): full path to the json file in COCO instances annotation format.
                          Only used for pretraining
                          Fixated in the function for support set and query set
-        json_root (str): Only used for pretraining
         image_root (str): the directory where the images in this json file exists.
                           Only set for support set, for query set, its hard written here
         metadata: meta data associated with dataset_name
@@ -308,7 +307,7 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
     meta_learn = True if meta_training_stage == "meta" else False
     if not meta_learn:
         return load_pretrain_coco_json(
-            json_file, json_root, image_root, metadata, dataset_name
+            json_file, image_root, metadata, dataset_name
         )
 
     dataset_dicts = {}
@@ -394,7 +393,7 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
     return dataset_dicts
 
 
-def register_meta_learn_coco(name, metadata, imgdir, jsondir, annofile):
+def register_meta_learn_coco(name, metadata, imgdir, annofile):
     split = name.split("_")[-1]  # base/novel/all
     print(f"coco split: {split}")
     metadata["thing_dataset_id_to_contiguous_id"] = metadata[
@@ -406,7 +405,7 @@ def register_meta_learn_coco(name, metadata, imgdir, jsondir, annofile):
     DatasetCatalog.register(
         name,
         lambda: load_few_shot_coco_json(
-            annofile, jsondir, imgdir, copy.deepcopy(metadata), name
+            annofile, imgdir, copy.deepcopy(metadata), name
         ),
     )
     return copy.deepcopy(metadata)

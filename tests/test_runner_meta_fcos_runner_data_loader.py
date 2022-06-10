@@ -39,7 +39,7 @@ def once_setup():
     cfg.SOLVER.IMS_PER_BATCH = 2
     cfg.MODEL.META_LEARN.SHOT = 2
     cfg.MODEL.META_LEARN.EVAL_SHOT = 2
-    cfg.DATALOADER.NUM_WORKERS = 4
+    cfg.DATALOADER.NUM_WORKERS = 1
     # register dataset
     runner.register(cfg)
 
@@ -93,7 +93,8 @@ class TestFewShotDataLoader(unittest.TestCase):
     def test_few_shot_test_support_set_base(self):
         dataset_name = "lvis_meta_val_all"
         # inference use all exampels to generate the code, 10 images at a time
-        self.cfg.MODEL.META_LEARN.BASE_EVAL_SHOT = -1
+        # set it to -1 if you want to test generating cls code using all shots
+        self.cfg.MODEL.META_LEARN.BASE_EVAL_SHOT = 10
         self.cfg.MODEL.META_LEARN.USE_ALL_GTS_IN_BASE_CLASSES = True
         set_global_cfg(self.cfg)
 
@@ -104,10 +105,10 @@ class TestFewShotDataLoader(unittest.TestCase):
         )
 
         # Remove the output directory
-        if os.path.exists("./output"):
+        if os.path.exists("./test_output"):
             import shutil
 
-            shutil.rmtree("./output")
+            shutil.rmtree("./test_output")
         data_loader_iter = iter(data_loader)
         num_iters = 1
         for i in range(num_iters):

@@ -66,14 +66,16 @@ coco/
 
 ## Expected dataset structure for LVIS:
 ```
+wget http://images.cocodataset.org/zips/train2017.zip
+wget http://images.cocodataset.org/zips/val2017.zip
+```
+```
 coco/
   {train,val}2017/
 lvis/
-  lvis_v0.5_{train,val}.json
-  lvis_v0.5_train_{freq,common,rare}.json
+  lvis_v1_{train,val}.json
 ```
 
-LVIS uses the same images and annotation format as COCO. You can use [split_lvis_annotation.py](split_lvis_annotation.py) to split `lvis_v0.5_train.json` into `lvis_v0.5_train_{freq,common,rare}.json`.
 # Train
 ## Command
 Under folder  `sylph/tools`. Run `run.py`. Main change includes: `--config-file`, `--runner`.

@@ -44,13 +44,14 @@ class MetaDatasetFromDict(data.Dataset):
     """
     Wrap a list to a torch Dataset. It produces elements of the list as data.
     Each time it generates random.
-    episodic_test_continualsupportset is only for base class while it is turned on
+    episodic_test_continualsupportset is only for base class while it is turned on, then the cls code will use all available shots
     """
 
     def __init__(
         self,
         multi_dataset: Dict,
-        stage: str = "episodic_train_both",  # episodic_test_supportset, episodic_test_queryset, episodic_test_continualsupportset
+        # episodic_test_supportset, episodic_test_queryset, episodic_test_continualsupportset
+        stage: str = "episodic_train_both",
         num_class: int = 5,
         num_shot: int = 5,
         num_query_shot: int = 1,
@@ -91,11 +92,13 @@ class MetaDatasetFromDict(data.Dataset):
         self.multi_dataset = {
             cid: dataset  # deepcopy(dataset), decrese the memory usage
             for cid, dataset in multi_dataset.items()
-            if cid != -1 and isinstance(cid, int)# cid != "metadata" and cid != "test_support_set_anno"
+            # cid != "metadata" and cid != "test_support_set_anno"
+            if cid != -1 and isinstance(cid, int)
         }
         if "test" in stage:
             logger.info("get continual support set")
-            self.continual_support_set = multi_dataset["support_set_inference_mode"] if "support_set_inference_mode" in multi_dataset else None
+            self.continual_support_set = multi_dataset[
+                "support_set_inference_mode"] if "support_set_inference_mode" in multi_dataset else None
         # for all base classes, one image one annotation
         self._contiguous_id_to_thing_dataset_id = {
             cid: tid for tid, cid in self._thing_dataset_id_to_contiguous_id.items()
@@ -108,7 +111,7 @@ class MetaDatasetFromDict(data.Dataset):
         self._num_query_shot = num_query_shot
         self._stage = stage
         self._meta_test_seed = meta_test_seed
-        self.seed = 2021 + meta_test_seed # different set for each test
+        self.seed = 2021 + meta_test_seed  # different set for each test
 
         def _serialize(data):
             buffer = pickle.dumps(data, protocol=-1)
@@ -126,7 +129,8 @@ class MetaDatasetFromDict(data.Dataset):
                 _addr = np.asarray([len(x) for x in lst], dtype=np.int64)
                 _addr = np.cumsum(_addr)
                 serialized_lst = np.concatenate(serialized_lst)
-                logger.info("Serialized dataset takes {:.2f} MiB".format(len(serialized_lst) / 1024 ** 2))
+                logger.info("Serialized dataset takes {:.2f} MiB".format(
+                    len(serialized_lst) / 1024 ** 2))
 
     # def __len__(self):
     #     if self._serialize:
@@ -178,7 +182,8 @@ class MetaDatasetFromDict(data.Dataset):
         if self._serialize:
             raise NotImplementedError("NotImplemented for serialize")
         else:
-            assert idx < len(self._classes), f"idx: {idx} is not within {len(self._classes)}"
+            assert idx < len(
+                self._classes), f"idx: {idx} is not within {len(self._classes)}"
             class_id = idx  # contiguous class id, from [0, c-1]
             if (
                 len(self.multi_dataset[class_id])
@@ -199,7 +204,7 @@ class MetaDatasetFromDict(data.Dataset):
                 )
             support_set = support_query_set[: self._num_shot]
             query_set = []
-            for query in support_query_set[self._num_shot :]:
+            for query in support_query_set[self._num_shot:]:
                 image_id = query["image_id"]
                 item = copy.deepcopy(self.img2annotation[image_id])
                 query_set.append(item)
@@ -233,7 +238,8 @@ class MetaDatasetFromDict(data.Dataset):
         else:
             class_id = idx  # contiguous class id, from [0, c-1]
             # dataset_id = self._contiguous_id_to_thing_dataset_id[idx]
-            assert idx < len(self._classes), f"idx: {idx} is not within {len(self._classes)}"
+            assert idx < len(
+                self._classes), f"idx: {idx} is not within {len(self._classes)}"
             class_name = self._classes[idx]
             # if self.test_support_set:
             #     assert isinstance(self._meta_test_seed, int), "meta_test_seed is not set"
@@ -280,6 +286,7 @@ class MetaDatasetFromDict(data.Dataset):
             # raise NotImplementedError(f"{self._stage} is not supported")
         else:
             raise NotImplementedError(f"{self._stage} is not supported")
+
 
 def get_meta_detection_dataset_dicts(
     names, filter_empty=True, min_keypoints=0, proposal_files=None
@@ -343,6 +350,7 @@ class MetaMapDataset(MapDataset):
             retry_count += 1
             if retry_count >= 3:
                 logger = logging.getLogger(__name__)
+                logger.warn(f"data: {self._dataset[cur_idx]}, idx: {cur_idx}")
                 logger.warning(
                     "Failed to apply `_map_func` for idx: {}, retry count: {}".format(
                         idx, retry_count
@@ -372,7 +380,8 @@ def _meta_train_loader_from_config(cfg, mapper=None, *, dataset=None, sampler=No
         sampler_name = cfg.DATALOADER.SAMPLER_TRAIN
         logger = logging.getLogger(__name__)
         logger.info("Using training sampler {}".format(sampler_name))
-        num_classes = len([k for k in dataset.keys() if k!=-1 and isinstance(k, int)])
+        num_classes = len(
+            [k for k in dataset.keys() if k != -1 and isinstance(k, int)])
         logger.info(f"training sampler: {num_classes}")
         if sampler_name == "TrainingSampler":
             # -1 is the image to all annotation, and metadata
@@ -388,13 +397,15 @@ def _meta_train_loader_from_config(cfg, mapper=None, *, dataset=None, sampler=No
             )
             sampler = SupportSetRepeatFactorTrainingSampler(repeat_factors)
         else:
-            raise ValueError("Unknown training sampler: {}".format(sampler_name))
+            raise ValueError(
+                "Unknown training sampler: {}".format(sampler_name))
 
     return {
         "dataset": dataset,  # a dict
         "sampler": sampler,
         "mapper": mapper,
-        "total_batch_size": cfg.SOLVER.IMS_PER_BATCH,  # used for query image loader, one for each
+        # used for query image loader, one for each
+        "total_batch_size": cfg.SOLVER.IMS_PER_BATCH,
         "aspect_ratio_grouping": cfg.DATALOADER.ASPECT_RATIO_GROUPING,
         "num_class": cfg.MODEL.META_LEARN.CLASS,
         "num_shot": cfg.MODEL.META_LEARN.SHOT,  # USE train_shot
@@ -552,7 +563,8 @@ def build_meta_detection_test_support_set_loader(
         meta_test_seed=meta_test_seed,
     )
 
-    logger.info(f"meta detection test support set dataset, len: {len(dataset)}")
+    logger.info(
+        f"meta detection test support set dataset, len: {len(dataset)}")
 
     if mapper is not None:
         dataset = MetaMapDataset(dataset, mapper)
@@ -561,7 +573,8 @@ def build_meta_detection_test_support_set_loader(
         sampler = InferenceSampler(len(dataset))
     # Always use 1 image per worker during inference since this is the
     # standard when reporting inference time in papers.
-    batch_sampler = torch.utils.data.sampler.BatchSampler(sampler, 1, drop_last=False)
+    batch_sampler = torch.utils.data.sampler.BatchSampler(
+        sampler, 1, drop_last=False)
     # num_workers = 0
 
     data_loader = torch.utils.data.DataLoader(
@@ -571,6 +584,7 @@ def build_meta_detection_test_support_set_loader(
         collate_fn=trivial_batch_collator,
     )
     return data_loader
+
 
 def _test_support_set_base_loader_from_config(cfg, dataset_name: str, mapper=None):
     """
@@ -594,6 +608,7 @@ def _test_support_set_base_loader_from_config(cfg, dataset_name: str, mapper=Non
         # "num_shot": cfg.MODEL.META_LEARN.EVAL_SHOT,  # replace it to eval_shot
         # "num_query_shot": cfg.MODEL.META_LEARN.QUERY_SHOT,
     }
+
 
 @configurable(from_config=_test_support_set_base_loader_from_config)
 def build_meta_detection_test_support_set_base_loader(
@@ -643,7 +658,8 @@ def build_meta_detection_test_support_set_base_loader(
         copy=False,
     )
 
-    logger.info(f"meta detection test support set dataset, len: {len(dataset)}")
+    logger.info(
+        f"meta detection test support set dataset, len: {len(dataset)}")
 
     if mapper is not None:
         dataset = MetaMapDataset(dataset, mapper)
@@ -652,7 +668,8 @@ def build_meta_detection_test_support_set_base_loader(
         sampler = InferenceSampler(len(dataset))
     # Always use 1 image per worker during inference since this is the
     # standard when reporting inference time in papers.
-    batch_sampler = torch.utils.data.sampler.BatchSampler(sampler, 1, drop_last=False)
+    batch_sampler = torch.utils.data.sampler.BatchSampler(
+        sampler, 1, drop_last=False)
     # num_workers = 0
 
     data_loader = torch.utils.data.DataLoader(
@@ -663,12 +680,14 @@ def build_meta_detection_test_support_set_base_loader(
     )
     return data_loader
 
+
 def _test_loader_from_config(cfg, dataset_name, mapper=None):
     """
     Uses the given `dataset_name` argument (instead of the names in cfg), because the
     standard practice is to evaluate each test set individually (not combining them).
     """
-    dataset = get_meta_detection_dataset_dicts([dataset_name], filter_empty=False)
+    dataset = get_meta_detection_dataset_dicts(
+        [dataset_name], filter_empty=False)
     if mapper is None:
         mapper = DatasetMapper(cfg, False)
     return {
@@ -725,7 +744,8 @@ def build_detection_test_loader(dataset, *, mapper, sampler=None, num_workers=0)
         sampler = InferenceSampler(len(dataset))
     # Always use 1 image per worker during inference since this is the
     # standard when reporting inference time in papers.
-    batch_sampler = torch.utils.data.sampler.BatchSampler(sampler, 1, drop_last=False)
+    batch_sampler = torch.utils.data.sampler.BatchSampler(
+        sampler, 1, drop_last=False)
 
     data_loader = torch.utils.data.DataLoader(
         dataset,

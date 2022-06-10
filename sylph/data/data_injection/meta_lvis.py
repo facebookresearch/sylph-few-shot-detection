@@ -219,7 +219,6 @@ def load_lvis_json_sample_k_per_cat(json_file, image_root, meta, sample_size: in
 def _gen_dataset_dicts_support_set_filter(imgs_anns, image_root: str, all_id_map: Dict[int, Any], id_map: Dict[int, Any], dataset_name: str, base_eval_shot: int, base_id_map: Dict[int, Any] = None):
     """
     For evaluation, each only sample at most 100 images to decrease memory consumption and avoid oom error
-    in fblearner flow.
     """
     support_set_dict = defaultdict(list)
     dataset, learning_stage, training_stage, data_split = dataset_name.split(
@@ -277,6 +276,7 @@ def _gen_dataset_dicts_support_set_filter(imgs_anns, image_root: str, all_id_map
             np.random.shuffle(support_set_dict[cid])
 
     # Ensure support_set_dict will not be changed
+    # TODO:The code to support generating class codes using all available images in a category, not well tested yet
     datasets_dict = []
     if base_id_map is not None and training_stage == "val" and data_split == "all":
         logger.info(
@@ -413,6 +413,8 @@ def load_few_shot_lvis_json(json_file, json_root, image_root, metadata, dataset_
     # Step 3: prepare list of data items from annotation, need image_root
     # 1. get support set
     base_eval_shot = global_cfg.MODEL.META_LEARN.BASE_EVAL_SHOT
+    logger.info(f"{dataset_name}, base_eval_shot: {base_eval_shot}")
+
     support_set_cat_to_list_dict, support_set_list_inference = _gen_dataset_dicts_support_set_filter(
         support_set_annotation, image_root, all_id_map, id_map, dataset_name, base_eval_shot, base_id_map
     )
@@ -420,6 +422,7 @@ def load_few_shot_lvis_json(json_file, json_root, image_root, metadata, dataset_
         support_set_cat_to_list_dict
     )
     dataset_dicts["support_set_inference_mode"] = support_set_list_inference
+    logger.info(f"{dataset_name}, {dataset_dicts.keys()}")
 
     # 2. get query dataset
     # TODO: change it to "query_set"
