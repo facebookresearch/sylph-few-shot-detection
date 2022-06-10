@@ -31,6 +31,7 @@ from sylph.data.data_injection.meta_tao import register_meta_learn_tao
 JSON_ANNOTATIONS_DIR = (
     "datasets/coco/annotations/"
 )
+IMAGE_ROOT_DIR = "datasets/coco/"
 
 logger = logging.getLogger(__name__)
 
@@ -49,50 +50,50 @@ def register_all_coco_meta_learn(
     METASPLITS = [
         (
             "coco_pretrain_train_base",  # pretraining, only 60 base classes is available
-            "coco_train2017",  # image root
+            os.path.join(IMAGE_ROOT_DIR, "train2017"),  # image root
             "instances_train2017.json",  # json file, will add it to annotation_dir later
         ),
         (
             "coco_pretrain_train_novel",  # pretraining, only 60 base classes is available
-            "coco_train2017",  # image root
+            os.path.join(IMAGE_ROOT_DIR, "train2017"),  # image root
             "instances_train2017.json",  # json file, will add it to annotation_dir later
         ),
         (
             "coco_pretrain_finetune_all",  # finetune, used in TFA finetune stage
-            "train2017",  # image root
+            os.path.join(IMAGE_ROOT_DIR, "train2017"),  # image root
             "instances_train2017.json",  # json file, will add it to annotation_dir later
         ),
         (
             # finetune, used in TFA simplified finetune stage, use only novel categories
             "coco_pretrain_finetune_novel",
-            "train2017",  # image root
+            os.path.join(IMAGE_ROOT_DIR, "train2017"),  # image root
             "instances_train2017.json",  # json file, will add it to annotation_dir later
         ),
         (
             "coco_pretrain_val_base",  # pretraining, only 60 base classes is available
-            "val2017",
+            os.path.join(IMAGE_ROOT_DIR, "val2017"),
             "instances_val2017.json",
         ),
         (
             "coco_pretrain_val_novel",  # pretraining, only 60 base classes is available
-            "val2017",
+            os.path.join(IMAGE_ROOT_DIR, "val2017"),
             "instances_val2017.json",
         ),
         # Pretain all classes
         (
             "coco_pretrain_train_all",  # novel classes use only 10 shots
-            "train2017",
+            os.path.join(IMAGE_ROOT_DIR, "train2017"),
             "instances_train2017.json",
         ),
         (
             "coco_pretrain_val_all",  # validate on base and novel
-            "val2017",
+            os.path.join(IMAGE_ROOT_DIR, "val2017"),
             "instances_val2017.json",
         ),
         (
             "coco_meta_train_base",  # meta training, trains stage, only 60 base classes
             # image root for both support set and query set
-            "coco_train2017",
+            os.path.join(IMAGE_ROOT_DIR, "train2017"),
             None,  # json file, will add in load_few_shot_coco_json
         ),
         # meta-finetune all classes # novel classes only 10 shots
@@ -100,25 +101,25 @@ def register_all_coco_meta_learn(
             # meta training, trains stage, all 80 classes, but for novel set, will only sample a few
             "coco_meta_train_all",
             # image root for both support set and query set
-            "train2017",
+            os.path.join(IMAGE_ROOT_DIR, "train2017"),
             None,  # json file, will add in load_few_shot_coco_json
         ),
         (
             "coco_meta_val_novel",  # meta training, validation stage, use 20 novel classes
             # image root for support set
-            "train2017",
+            os.path.join(IMAGE_ROOT_DIR, "train2017"),
             None,  # cant be none for evaluator, later we dynamically generate
         ),
         (
             "coco_meta_val_base",  # meta training, validation stage, use 60 base classes
             # image root for support set
-            "train2017",
+            os.path.join(IMAGE_ROOT_DIR, "train2017"),
             None,  # cant be none for evaluator, later we dynamically generate
         ),
         (
             "coco_meta_val_all",
             # image root for support set
-            "train2017",
+            os.path.join(IMAGE_ROOT_DIR, "train2017"),
             None,  # cant be none for evaluator, later we dynamically generate
         ),
     ]
@@ -144,7 +145,7 @@ def register_all_coco_meta_learn(
         # Added for evaluator purpose, use query annotation file
         if "meta_val" in name:
             new_annofile = os.path.join(
-                JSON_ANNOTATIONS_DIR, "coco/instances_val2017.json"
+                JSON_ANNOTATIONS_DIR, "instances_val2017.json"
             )
 
         if new_annofile is not None:

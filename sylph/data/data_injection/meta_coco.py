@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import copy
 import contextlib
 import io
 import itertools
@@ -153,7 +154,8 @@ def _gen_dataset_dicts_support_set_filter(imgs_anns, image_root, id_map):
         # pass the multiple objs to different list
         for cid, obj_lst in objs.items():
             # update the annotation to the filtered list in record
-            support_set_dict[cid].append({**record, **({"annotations": obj_lst})})
+            support_set_dict[cid].append(
+                {**record, **({"annotations": obj_lst})})
     return support_set_dict
 
 
@@ -168,7 +170,8 @@ def _gen_dataset_dicts_ann_by_category(imgs_anns, image_root, id_map, sample_siz
         image_id = img_dict["id"]
         if image_id not in images:
             record = {}
-            record["file_name"] = os.path.join(image_root, img_dict["file_name"])
+            record["file_name"] = os.path.join(
+                image_root, img_dict["file_name"])
             record["height"] = img_dict["height"]
             record["width"] = img_dict["width"]
             record["image_id"] = img_dict["id"]
@@ -187,10 +190,12 @@ def _gen_dataset_dicts_ann_by_category(imgs_anns, image_root, id_map, sample_siz
             obj["image_id"] = image_id
             if cid in id_map:
                 support_set_dict[cid].append(obj)
-    record_dict = defaultdict(dict) # image id to anno
+    record_dict = defaultdict(dict)  # image id to anno
 
-    for _, ann_lst in support_set_dict.items():  # sample annotations, and then put annotations back to link by images
-        downsampled_ann_lst = np.random.choice(ann_lst, min(len(ann_lst), sample_size), replace=False)
+    # sample annotations, and then put annotations back to link by images
+    for _, ann_lst in support_set_dict.items():
+        downsampled_ann_lst = np.random.choice(
+            ann_lst, min(len(ann_lst), sample_size), replace=False)
         # downsampled_ann_lst = ann_lst[0 : min(len(ann_lst), sample_size)]
         for ann in downsampled_ann_lst:
             image_id = ann["image_id"]
@@ -204,16 +209,23 @@ def _gen_dataset_dicts_ann_by_category(imgs_anns, image_root, id_map, sample_siz
 
 
 def load_pretrain_coco_json(json_file, json_root, image_root, metadata, dataset_name):
+    logger.info(f"load_pretrain_coco_json: {json_file}")
+
     name, meta_training_stage, training_stage, split = dataset_name.split("_")
     imgs_anns = _read_json_file(json_file)
     id_map = metadata["thing_dataset_id_to_contiguous_id"]
     ann_keys = ["iscrowd", "bbox", "category_id"]
     # convert each annotation to record, filter the annotation by id_map
+    logger.info(f"Pretraining {training_stage} stage")
     if training_stage == "train":
         if split == "base" or split == "novel":
-            dataset_dicts = _gen_dataset_dicts(imgs_anns, image_root, ann_keys, id_map)
+            dataset_dicts = _gen_dataset_dicts(
+                imgs_anns, image_root, ann_keys, id_map)
+            logger.info(f"training on {split} split.")
+
         elif split == "all":
-            print(f"joint training on all classes, where global_cfg.MODEL.TFA.TRAIN_SHOT is set to {global_cfg.MODEL.TFA.TRAIN_SHOT}")
+            print(
+                f"joint training on all classes, where global_cfg.MODEL.TFA.TRAIN_SHOT is set to {global_cfg.MODEL.TFA.TRAIN_SHOT}")
             base_id_map = metadata["base_thing_dataset_id_to_contiguous_id"]
             novel_id_map = metadata["novel_thing_dataset_id_to_contiguous_id"]
             # id is still object id
@@ -245,7 +257,7 @@ def load_pretrain_coco_json(json_file, json_root, image_root, metadata, dataset_
             dataset_dicts = list(itertools.chain(base_datasets.values()))
         else:
             raise NotImplementedError(f"{split} is not supported")
-    elif training_stage =="finetune": # a finetune stage on all categories
+    elif training_stage == "finetune":  # a finetune stage on all categories
         # assert split == "all", "finetune stage, but the split is not 'all'"
         print("TFA finetune")
         record_dict = _gen_dataset_dicts_ann_by_category(
@@ -259,7 +271,13 @@ def load_pretrain_coco_json(json_file, json_root, image_root, metadata, dataset_
                 anno_list[i]["category_id"] = id_map[cid]
         dataset_dicts = list(itertools.chain(record_dict.values()))
     else:  # "val"  for validation, always use all annotations
-        dataset_dicts = _gen_dataset_dicts(imgs_anns, image_root, ann_keys, id_map)
+        dataset_dicts = _gen_dataset_dicts(
+            imgs_anns, image_root, ann_keys, id_map)
+    import os
+    if os.environ.get('SYLPH_TEST_MODE', default="False"):
+        logger.info(
+            "SYLPH_TEST_MODE on, only load 10 images in pretraining stage")
+        return copy.deepcopy(dataset_dicts[0:10])
     return dataset_dicts
 
 
@@ -287,8 +305,6 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
     """
     name, meta_training_stage, training_stage, split = dataset_name.split("_")
     meta_learn = True if meta_training_stage == "meta" else False
-    strict = False
-    logger.info(f"Using strict dataset: {strict}")
     if not meta_learn:
         return load_pretrain_coco_json(
             json_file, json_root, image_root, metadata, dataset_name
@@ -296,19 +312,9 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
 
     dataset_dicts = {}
     dataset_dicts["metadata"] = copy.deepcopy(metadata)
+
     # Step 1: Load json file for meta-learning
     # Support set are always processed from instances_train
-    # if strict:
-    #     if "base" in dataset_name:
-    #         support_set_file = os.path.join(
-    #             COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR,
-    #             "coco/base_instances_train2017.json",
-    #         )
-    #     else:  # val should be able to pure val and val+base
-    #         support_set_file = os.path.join(
-    #             COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR,
-    #             "coco/novel_instances_train2017.json",
-    #         )
     support_set_file = os.path.join(
         JSON_ANNOTATIONS_DIR, "coco/instances_train2017.json"
     )
@@ -334,23 +340,17 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
     ann_keys = ["iscrowd", "bbox", "category_id"]
 
     # Step 3: prepare list of data items from annotation, need image_root
-    # 1. get support set
-    # if strict:
-    #     for did, cid in metadata["thing_dataset_id_to_contiguous_id"].items():
-    #         dataset_dicts[cid] = _gen_dataset_dicts_support_set(
-    #             support_set_annotation, image_root, cid, did
-    #         )
-    # else:
     dataset_dicts.update(
         _gen_dataset_dicts_support_set_filter(
             support_set_annotation, image_root, id_map
         )
     )
-    if split == "all": # downsample
+    if split == "all":  # downsample
         novel_id_map = metadata["novel_thing_dataset_id_to_contiguous_id"]
         for ndid in novel_id_map.keys():
             cid = id_map[ndid]
-            dataset_dicts[cid] = np.random.choice(dataset_dicts[cid], global_cfg.MODEL.META_LEARN.EVAL_SHOT, replace=False)
+            dataset_dicts[cid] = np.random.choice(
+                dataset_dicts[cid], global_cfg.MODEL.META_LEARN.EVAL_SHOT, replace=False)
 
     # 2. get query dataset
     dataset_dicts[-1] = _gen_dataset_dicts(
@@ -384,9 +384,6 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
             # [${x}shot][seed${y}][${class_name}]
         dataset_dicts["test_support_set_anno"] = test_support_set_anno
     return dataset_dicts
-
-
-import copy
 
 
 def register_meta_learn_coco(name, metadata, imgdir, jsondir, annofile):

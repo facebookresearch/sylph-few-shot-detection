@@ -20,7 +20,8 @@ def add_base_config(_C):
     _C.MODEL.PROPOSAL_GENERATOR.FREEZE_CLS_TOWER = False
     _C.MODEL.PROPOSAL_GENERATOR.FREEZE_CLS_LOGITS = False
     # Freeze the box branch
-    _C.MODEL.PROPOSAL_GENERATOR.FREEZE_BBOX_BRANCH = False # both tower and reg is frozen
+    # both tower and reg is frozen
+    _C.MODEL.PROPOSAL_GENERATOR.FREEZE_BBOX_BRANCH = False
     _C.MODEL.PROPOSAL_GENERATOR.FREEZE_BBOX_TOWER = False
     # Freeze the whole proposal generator
     _C.MODEL.PROPOSAL_GENERATOR.FREEZE = False
@@ -40,25 +41,31 @@ def add_fcos_config(_C):
     _C.MODEL.FCOS.L2_NORM_CLS_WEIGHT = False
     return _C
 
+
 def add_tfa_config(_C):
     _C.MODEL.TFA = type(_C)()
-    _C.MODEL.TFA.FINETINE = False # indicates training stage
+    _C.MODEL.TFA.FINETINE = False  # indicates training stage
     _C.MODEL.TFA.TRAIN_SHOT = 10
-    _C.MODEL.TFA.USE_PRETRAINED_BASE_CLS_LOGITS = True # this is to initalize base classes with pretrained base classes weights
-    _C.MODEL.TFA.EVAL_WITH_PRETRAINED_BASE_CLS_LOGITS = False # this is for TFA-simplified,
+    # this is to initalize base classes with pretrained base classes weights
+    _C.MODEL.TFA.USE_PRETRAINED_BASE_CLS_LOGITS = True
+    # this is for TFA-simplified,
+    _C.MODEL.TFA.EVAL_WITH_PRETRAINED_BASE_CLS_LOGITS = False
 
     return _C
+
 
 def add_default_meta_learn_config(_C):
     # Config the meta-learner and training stage
     _C.MODEL.META_LEARN = type(_C)()
     _C.MODEL.META_LEARN.EPISODIC_LEARNING = False  # episodic learning?
     _C.MODEL.META_LEARN.SHOT = 5
-    _C.MODEL.META_LEARN.EVAL_SHOT = 10 # shot on novel categories, -1 is for using all shots
+    # shot on novel categories, -1 is for using all shots
+    _C.MODEL.META_LEARN.EVAL_SHOT = 10
     _C.MODEL.META_LEARN.BASE_EVAL_SHOT = 10
     _C.MODEL.META_LEARN.CLASS = 5
     _C.MODEL.META_LEARN.USE_ALL_GTS_IN_BASE_CLASSES = True
-    _C.MODEL.META_LEARN.EVAL_WITH_PRETRAINED_CODE = False # use this only if the detector is fixed but the last classification layer
+    # use this only if the detector is fixed but the last classification layer
+    _C.MODEL.META_LEARN.EVAL_WITH_PRETRAINED_CODE = False
     # Num of task is the same as the batch size
     _C.MODEL.META_LEARN.QUERY_SHOT = 1  # per class query image while testing
 
@@ -88,10 +95,12 @@ def add_code_genertor_config(_C):
     _C.MODEL.META_LEARN.CODE_GENERATOR.MASK_NORM = "GN"
     # _C.MODEL.META_LEARN.CODE_GENERATOR.USE_BKG = True
     _C.MODEL.META_LEARN.CODE_GENERATOR.CONV_L2_NORM = False
-    _C.MODEL.META_LEARN.CODE_GENERATOR.USE_BIAS = True # Bias is always predicted (0 + pred) + priori, but if this is turned off, then it does not use the prediction
+    # Bias is always predicted (0 + pred) + priori, but if this is turned off, then it does not use the prediction
+    _C.MODEL.META_LEARN.CODE_GENERATOR.USE_BIAS = True
     _C.MODEL.META_LEARN.CODE_GENERATOR.BIAS_L2_NORM = False
     _C.MODEL.META_LEARN.CODE_GENERATOR.TOWER_LAYERS = [["GN", ""]]
-    _C.MODEL.META_LEARN.CODE_GENERATOR.CLS_LAYER = ["GN", "", 1]  # output kernel size
+    _C.MODEL.META_LEARN.CODE_GENERATOR.CLS_LAYER = [
+        "GN", "", 1]  # output kernel size
     _C.MODEL.META_LEARN.CODE_GENERATOR.USE_WEIGHT_SCALE = True  # output kernel size
 
     _C.MODEL.META_LEARN.CODE_GENERATOR.BIAS_LAYER = []  # in default no bias

@@ -1,4 +1,4 @@
-# Few shot detection
+# Sylph: The hypernetwork Framework for No-training Few shot detection
 ## Install packages
 Need python>3.8.
 
@@ -50,12 +50,17 @@ Specify    `--config-file` and `--runner` in `tools/run.py`.
 `configs="sylph://LVIS-Meta-FCOS-Detection/Meta_FCOS_MS_R_50_1x.yaml"`
 
 # Prepare data
+Download coco images:
+```
+wget http://images.cocodataset.org/zips/train2017.zip
+wget http://images.cocodataset.org/zips/val2017.zip
+```
 ## Expected dataset structure for COCO:
 ```
 coco/
   annotations/
-    instances_{train,val}2014.json
-  {train,val}2014/
+    instances_{train,val}2017.json
+  {train,val}2017/
     # image files that are mentioned in the corresponding json
 ```
 
@@ -73,6 +78,8 @@ LVIS uses the same images and annotation format as COCO. You can use [split_lvis
 ## Command
 Under folder  `sylph/tools`. Run `run.py`. Main change includes: `--config-file`, `--runner`.
 ### Train Meta-FCOS
+We provide test mode, where the number of steps, number of gpus, and batch size is gonna be decreased to test the workflow end to end.
+`export SYLPH_TEST_MODE=true"
 #### COCO
 Pretraining
 ```
@@ -80,12 +87,12 @@ Pretraining
 ```
 
 ```
-python3 train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml" --num-processes 3 \\n  --output-dir output/meta-fcos/coco/meta-train/WS_iFSD_imagenet1000x100gt 
+python3 tools/train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml" --num-processes 3  --output-dir output/meta-fcos/coco/pretrain/
 ```
 
 Meta-learning
 ```
-./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml"     --entitlement ar_rp_vll     --name "coco_meta_learn"     --nodes 4 --num-gpus 4   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar    --async-val --canary --runner "sylph.runner.MetaFCOSRunner"
+python3 tools/train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml" --num-processes 3  --output-dir output/meta-fcos/coco/meta-train/
 ```
 
 

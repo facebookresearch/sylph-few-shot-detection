@@ -1,3 +1,5 @@
+# Note: REFERENCE_WORLD_SIZE is the number of gpus, IMS_PER_BATCH/REFERENCE_WORLD_SIZE is the images/gpu
+# modify this to your use
 _BASE_: "Base-FCOS.yaml"
 MODEL:
   META_ARCHITECTURE: "MetaOneStageDetector"
@@ -25,11 +27,11 @@ DATASETS:
 # TEST:
 #   EVAL_PERIOD: 5000
 SOLVER:
-  IMS_PER_BATCH: 128
+  IMS_PER_BATCH: 2 # 128
   BASE_LR: 0.01  # Note that RetinaNet uses a different default learning rate
   STEPS: (60000, 80000)
-  MAX_ITER: 90000
-  REFERENCE_WORLD_SIZE: 64
+  MAX_ITER: 10 #90000
+  REFERENCE_WORLD_SIZE: 1 # 64
   CHECKPOINT_PERIOD: 10000
 
   # LR_MULTIPLIER_OVERWRITE, [{'backbone': 0.1}, {'reference_points': 0.1, 'sampling_offsets': 0.1}]
