@@ -90,9 +90,11 @@ Pretraining
 python3 tools/train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml" --num-processes 3  --output-dir output/meta-fcos/coco/pretrain/
 ```
 
-Meta-learning
+Meta-learning.
+
+First, find the weight checkpoint you want to use from pretraining, and modify `MODEL.WEIGHTS`.
 ```
-python3 tools/train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml" --num-processes 3  --output-dir output/meta-fcos/coco/meta-train/
+python3 tools/train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml" --num-processes 3  --output-dir output/meta-fcos/coco/meta-train/ MODEL.WEIGHTS output/meta-fcos/coco/meta-train/WS_iFSD_imagenet1000x100gt/model_final.pth
 ```
 
 

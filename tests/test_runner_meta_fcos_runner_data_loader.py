@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def once_setup():
     config_file = "LVISv1-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml"
     config_file = pkg_resources.resource_filename(
-        "sylph.model_zoo", os.path.join("configs", config_file)
+        "sylph", os.path.join("configs", config_file)
     )
     config_file = parutil.get_file_path(config_file)
 

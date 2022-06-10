@@ -24,9 +24,10 @@ This file contains functions to parse COCO-format annotations into dicts in "Det
 
 __all__ = ["register_meta_learn_coco"]
 
-JSON_ANNOTATIONS_DIR = (
-    "manifold://fair_vision_data/tree/detectron2/json_dataset_annotations/"
-)
+# JSON_ANNOTATIONS_DIR = (
+#     "manifold://fair_vision_data/tree/detectron2/json_dataset_annotations/"
+# )
+from .dataset_path_config import COCO_JSON_ANNOTATIONS_DIR, COCO_IMAGE_ROOT_DIR
 COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR = "manifold://fai4ar/tree/datasets/coco_meta_learn/"
 logger = logging.getLogger(__name__)
 
@@ -316,7 +317,7 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
     # Step 1: Load json file for meta-learning
     # Support set are always processed from instances_train
     support_set_file = os.path.join(
-        JSON_ANNOTATIONS_DIR, "coco/instances_train2017.json"
+        COCO_JSON_ANNOTATIONS_DIR, "instances_train2017.json"
     )
     logger.info(f"{dataset_name}, support set file: {support_set_file}")
     support_set_annotation = _read_json_file(support_set_file)
@@ -325,11 +326,10 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
     # In train: query set are from instances_train
     # In test: query set are from instances_val
     query_json_file = os.path.join(
-        JSON_ANNOTATIONS_DIR, f"coco/instances_{training_stage}2017.json"
+        COCO_JSON_ANNOTATIONS_DIR, f"instances_{training_stage}2017.json"
     )
-    query_image_root = (
-        f"memcache_manifold://fair_vision_data/tree/coco_{training_stage}2017"
-    )
+    query_image_root = os.path.join(
+        COCO_IMAGE_ROOT_DIR, f"{training_stage}2017")
     # in meta-training/finetuning stage: use this for query set reference
     logger.info(f"{dataset_name}, query annotation file: {query_json_file}")
     query_set_annotation = _read_json_file(
@@ -357,32 +357,32 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
         query_set_annotation, query_image_root, ann_keys, id_map
     )
     # If it is validation, we save json file that only has novel or base classes for evaluator
-    # TODO: delete the following code
-    # From here is to support Xinyu's repeat tests
-    predefined_test_support_set_mapper = {
-        "coco_meta_val_base": os.path.join(
-            COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR,
-            "coco/coco_meta_val_base_support_set.json",
-        ),
-        "coco_meta_val_novel": os.path.join(
-            COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR,
-            "coco/coco_meta_val_novel_support_set.json",
-        ),
-    }
-    if dataset_name in predefined_test_support_set_mapper:
-        test_support_set_anno_path = predefined_test_support_set_mapper[dataset_name]
-        assert PathManager.exists(
-            test_support_set_anno_path
-        ), f"File {test_support_set_anno_path} does not exist."
-        logger.info(f"load test support set {test_support_set_anno_path}")
-        test_support_set_anno_path = PathManager.get_local_path(
-            test_support_set_anno_path, force=True
-        )
-        with open(test_support_set_anno_path, "r") as f:
-            test_support_set_anno = json.load(f)  # Dict
-            # test support set anno's structure:
-            # [${x}shot][seed${y}][${class_name}]
-        dataset_dicts["test_support_set_anno"] = test_support_set_anno
+    # # TODO: check if this code is needed
+    # # From here is to support Xinyu's repeat tests
+    # predefined_test_support_set_mapper = {
+    #     "coco_meta_val_base": os.path.join(
+    #         COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR,
+    #         "coco/coco_meta_val_base_support_set.json",
+    #     ),
+    #     "coco_meta_val_novel": os.path.join(
+    #         COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR,
+    #         "coco/coco_meta_val_novel_support_set.json",
+    #     ),
+    # }
+    # if dataset_name in predefined_test_support_set_mapper:
+    #     test_support_set_anno_path = predefined_test_support_set_mapper[dataset_name]
+    #     assert PathManager.exists(
+    #         test_support_set_anno_path
+    #     ), f"File {test_support_set_anno_path} does not exist."
+    #     logger.info(f"load test support set {test_support_set_anno_path}")
+    #     test_support_set_anno_path = PathManager.get_local_path(
+    #         test_support_set_anno_path, force=True
+    #     )
+    #     with open(test_support_set_anno_path, "r") as f:
+    #         test_support_set_anno = json.load(f)  # Dict
+    #         # test support set anno's structure:
+    #         # [${x}shot][seed${y}][${class_name}]
+    #     dataset_dicts["test_support_set_anno"] = test_support_set_anno
     return dataset_dicts
 
 

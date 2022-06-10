@@ -2,10 +2,7 @@
 _BASE_: "Base-FCOS.yaml"
 MODEL:
   META_ARCHITECTURE: "MetaOneStageDetector"
-  # aug: 20211104222711
-  # all: 20211103155126
-  WEIGHTS: "manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test/20211104222711/e2e_train/model_final.pth" #20210803120856
-  # WEIGHTS: "manifold://uru_detection/tree/fblearner/ururpn_lvis_R50.eUamcLQKDY/e2e_train/model_final.pth"
+  WEIGHTS: "manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test/20211104222711/e2e_train/model_final.pth" 
   DDP_FIND_UNUSED_PARAMETERS: True
   BACKBONE:
     NAME: "build_fcos_resnet_fpn_backbone"

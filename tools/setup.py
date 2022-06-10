@@ -160,6 +160,25 @@ def create_cfg_from_cli_args(args, default_cfg):
     return cfg
 
 
+def _sylph_prepare_configs(cfg: CfgNode):
+    # modify training steps if
+    import os
+    if os.environ.get('SYLPH_TEST_MODE', default="False"):
+        logger.warn(
+            "SYLPH_TEST_MODE on, using one machine, batch size 2, steps 10")
+        cfg.SOLVER.IMS_PER_BATCH = 2
+        cfg.SOLVER.MAX_ITER = 10
+        cfg.SOLVER.REFERENCE_WORLD_SIZE = 1
+        # setup for meta-learning
+        cfg.MODEL.META_LEARN.CLASS = 2
+        cfg.MODEL.META_LEARN.SHOT = 2
+        cfg.MODEL.META_LEARN.BASE_EVAL_SHOT = 2  # -1 means using all
+        cfg.MODEL.META_LEARN.EVAL_SHOT = 2  # for novel classes
+        cfg.MODEL.META_LEARN.QUERY_SHOT = 1
+    set_global_cfg(cfg)
+    return
+
+
 def prepare_for_launch(args):
     """
     Load config, figure out working directory, create runner.
@@ -173,8 +192,6 @@ def prepare_for_launch(args):
     logger.info("Using runner: {}\n".format(runner))
 
     cfg = runner.get_default_cfg()
-    # base_cfg = create_cfg(cfg,
-    #                       config_file, pre_training_opts)
 
     if args.config_file:
         with PathManager.open(reroute_config_path(args.config_file), "r") as f:
@@ -185,16 +202,9 @@ def prepare_for_launch(args):
         cfg.merge_from_list(args.opts)
     else:
         cfg = create_cfg_from_cli_args(args, default_cfg=cfg)
-    # modify training steps if
-    import os
-    if os.environ.get('SYLPH_TEST_MODE', default="False"):
-        logger.warn(
-            "SYLPH_TEST_MODE on, using one machine, batch size 2, steps 10")
-        cfg.SOLVER.IMS_PER_BATCH = 2
-        cfg.SOLVER.MAX_ITER = 10
-        cfg.SOLVER.REFERENCE_WORLD_SIZE = 1
-    set_global_cfg(cfg)
-
+    # START: sylph special config
+    _sylph_prepare_configs(cfg)
+    # END
     cfg.freeze()
 
     assert args.output_dir or args.config_file
