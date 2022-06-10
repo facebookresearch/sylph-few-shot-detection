@@ -27,7 +27,7 @@ __all__ = ["register_meta_learn_coco"]
 # JSON_ANNOTATIONS_DIR = (
 #     "manifold://fair_vision_data/tree/detectron2/json_dataset_annotations/"
 # )
-from .dataset_path_config import COCO_JSON_ANNOTATIONS_DIR, COCO_IMAGE_ROOT_DIR
+from .dataset_path_config import COCO_JSON_ANNOTATIONS_DIR, COCO_IMAGE_ROOT_DIR, LVIS_JSON_ANNOTATIONS_DIR
 COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR = "manifold://fai4ar/tree/datasets/coco_meta_learn/"
 logger = logging.getLogger(__name__)
 
@@ -335,7 +335,7 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
     query_set_annotation = _read_json_file(
         query_json_file
     )  # used for traing or testing
-
+    logger.info("done reading json file")
     id_map = metadata["thing_dataset_id_to_contiguous_id"]
     ann_keys = ["iscrowd", "bbox", "category_id"]
 
@@ -345,7 +345,12 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
             support_set_annotation, image_root, id_map
         )
     )
+    logger.info(
+        f"Done preparing a list of datasets_dict for support set,  len: {len(dataset_dicts)}")
+
     if split == "all":  # downsample
+        logger.info(f"{split} split")
+
         novel_id_map = metadata["novel_thing_dataset_id_to_contiguous_id"]
         for ndid in novel_id_map.keys():
             cid = id_map[ndid]
@@ -356,6 +361,9 @@ def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_
     dataset_dicts[-1] = _gen_dataset_dicts(
         query_set_annotation, query_image_root, ann_keys, id_map
     )
+    logger.info(
+        f"Done preparing a list of datasets_dict for query set, len: {len(dataset_dicts[-1])}")
+
     # If it is validation, we save json file that only has novel or base classes for evaluator
     # # TODO: check if this code is needed
     # # From here is to support Xinyu's repeat tests

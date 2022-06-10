@@ -23,7 +23,7 @@ from sylph.data.data_injection.builtin_meta_dataset_few_shot_detection import (
 from sylph.data.data_injection.meta_coco import register_meta_learn_coco
 from sylph.data.data_injection.meta_lvis import register_meta_learn_lvis
 from sylph.data.data_injection.meta_tao import register_meta_learn_tao
-from .dataset_path_config import COCO_IMAGE_ROOT_DIR, COCO_JSON_ANNOTATIONS_DIR
+from .dataset_path_config import COCO_IMAGE_ROOT_DIR, COCO_JSON_ANNOTATIONS_DIR, LVIS_JSON_ANNOTATIONS_DIR
 # JSON_ANNOTATIONS_DIR = (
 #     "manifold://fair_vision_data/tree/detectron2/json_dataset_annotations/"
 # )
@@ -172,14 +172,16 @@ def register_all_lvis_meta_learn(
     """
     from sylph.data.data_injection.classes import datasplit_categories
 
-    lvis_image_root = "memcache_manifold://fair_vision_data/tree/coco_"
+    lvis_image_root = COCO_IMAGE_ROOT_DIR
+    # TODO: if they can share the same images
+    # "memcache_manifold://fair_vision_data/tree/coco_"
     METASPLITS = []
     # register pretrain datasets
     for data_split in datasplit_categories.keys():
         # add TFA finetune stage, it samples images
         for training_stage in ["train", "val", "finetune"]:
             dataset_name = f"lvis_pretrain_{training_stage}_{data_split}"
-            json_file = f"lvis/lvis_v1_{training_stage}.json" if training_stage != "finetune" else "lvis/lvis_v1_train.json"
+            json_file = f"lvis_v1_{training_stage}.json" if training_stage != "finetune" else "lvis_v1_train.json"
             METASPLITS.append((dataset_name, lvis_image_root, json_file))
             logger.info(f"Registering {dataset_name}")
     # register meta-learn datasets, including base, novel, and all splits
@@ -195,7 +197,7 @@ def register_all_lvis_meta_learn(
     # a common meta data
     for name, imgdir, annofile in METASPLITS:
         new_annofile = (
-            os.path.join(COCO_JSON_ANNOTATIONS_DIR, annofile)
+            os.path.join(LVIS_JSON_ANNOTATIONS_DIR, annofile)
             if annofile is not None
             else None
         )
@@ -211,7 +213,7 @@ def register_all_lvis_meta_learn(
         # Added for evaluator purpose
         if "meta_val" in name:
             new_annofile = os.path.join(
-                COCO_JSON_ANNOTATIONS_DIR, "lvis/lvis_v1_val.json")
+                LVIS_JSON_ANNOTATIONS_DIR, "lvis_v1_val.json")
 
         if new_annofile is not None:
             MetadataCatalog.get(name).set(
@@ -226,61 +228,61 @@ def register_all_lvis_meta_learn(
 
 
 # Temporarily for demo
-TAO_ANNOTATIONS_DIR = "manifold://fai4ar/tree/datasets/TAO/20210625_video_demo/"
+# TAO_ANNOTATIONS_DIR = "manifold://fai4ar/tree/datasets/TAO/20210625_video_demo/"
 
 
-def register_all_tao_meta_learn():
-    """
-    pretrain: the data loader needs to filter out novel classes
-    """
-    # register few-shot coco datase
-    METASPLITS = [
-        (
-            "tao_pretrain_val_base",  # 1105 base classes
-            "manifold://fai4ar/tree/datasets/TAO/frames",  # image root
-            "tao_lvis_val_full_frames.json",  # validation.json",
-        ),
-        (
-            "tao_meta_val_novelpartial",  # train part inference
-            "manifold://fai4ar/tree/datasets/TAO/frames",  # image root
-            "tao_lvis_val.json",
-        ),
-        (
-            "tao_meta_val_novel",  # val part inference
-            "manifold://fai4ar/tree/datasets/TAO/frames",  # image root
-            "tao_lvis_val_full_frames.json",  # validation.json",
-        ),
-    ]
+# def register_all_tao_meta_learn():
+#     """
+#     pretrain: the data loader needs to filter out novel classes
+#     """
+#     # register few-shot coco datase
+#     METASPLITS = [
+#         (
+#             "tao_pretrain_val_base",  # 1105 base classes
+#             "manifold://fai4ar/tree/datasets/TAO/frames",  # image root
+#             "tao_lvis_val_full_frames.json",  # validation.json",
+#         ),
+#         (
+#             "tao_meta_val_novelpartial",  # train part inference
+#             "manifold://fai4ar/tree/datasets/TAO/frames",  # image root
+#             "tao_lvis_val.json",
+#         ),
+#         (
+#             "tao_meta_val_novel",  # val part inference
+#             "manifold://fai4ar/tree/datasets/TAO/frames",  # image root
+#             "tao_lvis_val_full_frames.json",  # validation.json",
+#         ),
+#     ]
 
-    # register small meta datasets for fine-tuning stage
-    metadata = _fewshot_get_builtin_metadata("tao_meta_learn")
-    # a common meta data
-    for name, imgdir, annofile in METASPLITS:
-        new_annofile = (
-            os.path.join(TAO_ANNOTATIONS_DIR, annofile)
-            if annofile is not None
-            else None
-        )
-        # different name will update the metadata thing_classes
-        updated_metadata = register_meta_learn_tao(
-            name=name,
-            metadata=copy.deepcopy(metadata),
-            imgdir=imgdir,
-            annofile=new_annofile,  # query json file
-        )
+#     # register small meta datasets for fine-tuning stage
+#     metadata = _fewshot_get_builtin_metadata("tao_meta_learn")
+#     # a common meta data
+#     for name, imgdir, annofile in METASPLITS:
+#         new_annofile = (
+#             os.path.join(TAO_ANNOTATIONS_DIR, annofile)
+#             if annofile is not None
+#             else None
+#         )
+#         # different name will update the metadata thing_classes
+#         updated_metadata = register_meta_learn_tao(
+#             name=name,
+#             metadata=copy.deepcopy(metadata),
+#             imgdir=imgdir,
+#             annofile=new_annofile,  # query json file
+#         )
 
-        if new_annofile is not None:
-            MetadataCatalog.get(name).set(
-                json_file=new_annofile,
-                evaluator_type="lvis_meta_learn",
-                **updated_metadata,
-            )
-        else:
-            MetadataCatalog.get(name).set(
-                evaluator_type="lvis_meta_learn", **updated_metadata
-            )
+#         if new_annofile is not None:
+#             MetadataCatalog.get(name).set(
+#                 json_file=new_annofile,
+#                 evaluator_type="lvis_meta_learn",
+#                 **updated_metadata,
+#             )
+#         else:
+#             MetadataCatalog.get(name).set(
+#                 evaluator_type="lvis_meta_learn", **updated_metadata
+#             )
 
 
 register_all_coco_meta_learn()
 register_all_lvis_meta_learn()
-register_all_tao_meta_learn()
+# register_all_tao_meta_learn()

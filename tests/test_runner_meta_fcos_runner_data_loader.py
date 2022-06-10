@@ -16,11 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 def once_setup():
+    # set environment
+    os.environ.get("SYLPH_TEST_MODE", default=True)
     config_file = "LVISv1-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml"
     config_file = pkg_resources.resource_filename(
         "sylph", os.path.join("configs", config_file)
     )
-    config_file = parutil.get_file_path(config_file)
+    logger.info(f"config_file {config_file}")
+
+    # config_file = parutil.get_file_path(config_file)
 
     logger.info(f"config_file {config_file}")
 

@@ -16,7 +16,7 @@ from .classes import unknown_category
 import numpy as np
 from sylph.data.utils import temp_seed
 
-
+from .dataset_path_config import LVIS_JSON_ANNOTATIONS_DIR
 
 """
 This file contains functions to parse LVIS-format annotations into dicts in the
@@ -38,7 +38,8 @@ def _load_lvis_json(json_file):
     lvis_api = LVIS(json_file)
     if timer.seconds() > 1:
         logger.info(
-            "Loading {} takes {:.2f} seconds.".format(json_file, timer.seconds())
+            "Loading {} takes {:.2f} seconds.".format(
+                json_file, timer.seconds())
         )
 
     # sort indices for reproducible results
@@ -77,7 +78,8 @@ def _load_lvis_json(json_file):
     imgs_anns = list(zip(imgs, anns))
 
     logger.info(
-        "Loaded {} images in the LVIS format from {}".format(len(imgs_anns), json_file)
+        "Loaded {} images in the LVIS format from {}".format(
+            len(imgs_anns), json_file)
     )
     return imgs_anns
 
@@ -118,10 +120,10 @@ def _gen_dataset_dicts(imgs_anns, image_root: str, id_map: Dict[int, Any]):
             assert anno["image_id"] == image_id
             obj = {"bbox": anno["bbox"], "bbox_mode": BoxMode.XYWH_ABS}
             # handle category_id
-            if anno["category_id"] in id_map: # base classes
+            if anno["category_id"] in id_map:  # base classes
                 obj["category_id"] = id_map[anno["category_id"]]
                 all_cats.add(anno["category_id"])
-            else: # novel classes, mark it as unknown
+            else:  # novel classes, mark it as unknown
                 if use_unknown:
                     obj["category_id"] = id_map[unknown_category["id"]]
                 else:
@@ -145,6 +147,7 @@ def _gen_dataset_dicts(imgs_anns, image_root: str, id_map: Dict[int, Any]):
         dataset_dicts.append(record)
     return dataset_dicts
 
+
 def _gen_dataset_dicts_ann_by_category(imgs_anns, image_root: str, id_map: Dict[int, Any], sample_size: int):
     """
     Filter annotations by id. Return image_id indexed records
@@ -156,13 +159,14 @@ def _gen_dataset_dicts_ann_by_category(imgs_anns, image_root: str, id_map: Dict[
         image_id = img_dict["id"]
         if image_id not in images:
             record = {}
-            record["file_name"] = record["file_name"] = get_file_name(image_root, img_dict) # change
+            record["file_name"] = record["file_name"] = get_file_name(
+                image_root, img_dict)  # change
             record["height"] = img_dict["height"]
             record["width"] = img_dict["width"]
             record["image_id"] = img_dict["id"]
             record["not_exhaustive_category_ids"] = img_dict.get(
-            "not_exhaustive_category_ids", []
-        )
+                "not_exhaustive_category_ids", []
+            )
             record["neg_category_ids"] = img_dict.get("neg_category_ids", [])
             images[image_id] = record
 
@@ -183,7 +187,8 @@ def _gen_dataset_dicts_ann_by_category(imgs_anns, image_root: str, id_map: Dict[
     record_dict = defaultdict(dict)
 
     for _, ann_lst in support_set_dict.items():  # sample annotations
-        downsampled_ann_lst = np.random.choice(ann_lst, min(len(ann_lst), sample_size), replace=False)
+        downsampled_ann_lst = np.random.choice(
+            ann_lst, min(len(ann_lst), sample_size), replace=False)
         # downsampled_ann_lst = ann_lst[0 : min(len(ann_lst), sample_size)]
         # put annotations back to records
         for ann in downsampled_ann_lst:
@@ -204,17 +209,21 @@ def load_lvis_json_many_shots(json_file, image_root, meta, dataset_name=None):
     )
 
 # Added for TFA, finetune the classifier or regressor on all classes, with maximum shots: sample_size
-def load_lvis_json_sample_k_per_cat(json_file, image_root, meta, sample_size: int, dataset_name: str=None):
+
+
+def load_lvis_json_sample_k_per_cat(json_file, image_root, meta, sample_size: int, dataset_name: str = None):
     imgs_anns = _load_lvis_json(json_file)
     return _gen_dataset_dicts_ann_by_category(imgs_anns, image_root, meta["thing_dataset_id_to_contiguous_id"], sample_size=sample_size)
 
-def _gen_dataset_dicts_support_set_filter(imgs_anns, image_root: str, all_id_map:Dict[int, Any], id_map:Dict[int, Any], dataset_name: str, base_eval_shot: int, base_id_map: Dict[int, Any] = None):
+
+def _gen_dataset_dicts_support_set_filter(imgs_anns, image_root: str, all_id_map: Dict[int, Any], id_map: Dict[int, Any], dataset_name: str, base_eval_shot: int, base_id_map: Dict[int, Any] = None):
     """
     For evaluation, each only sample at most 100 images to decrease memory consumption and avoid oom error
     in fblearner flow.
     """
     support_set_dict = defaultdict(list)
-    dataset, learning_stage, training_stage, data_split = dataset_name.split('_')
+    dataset, learning_stage, training_stage, data_split = dataset_name.split(
+        '_')
     assert learning_stage == "meta"
     # sort all annotations by category id
     for (img_dict, anno_dict_list) in imgs_anns:
@@ -254,8 +263,9 @@ def _gen_dataset_dicts_support_set_filter(imgs_anns, image_root: str, all_id_map
             objs[obj["category_id"]].append(obj)
         # pass the multiple objs to different list
         for cid, obj_lst in objs.items():
-            for obj in obj_lst: # Ensure each record has only one annotation
-                support_set_dict[cid].append({**record, **({"annotations": [obj]})})
+            for obj in obj_lst:  # Ensure each record has only one annotation
+                support_set_dict[cid].append(
+                    {**record, **({"annotations": [obj]})})
 
     assert len(id_map) == len(
         support_set_dict
@@ -269,10 +279,11 @@ def _gen_dataset_dicts_support_set_filter(imgs_anns, image_root: str, all_id_map
     # Ensure support_set_dict will not be changed
     datasets_dict = []
     if base_id_map is not None and training_stage == "val" and data_split == "all":
-        logger.info("Get the format for generating code using all boxes in a category")
+        logger.info(
+            "Get the format for generating code using all boxes in a category")
         for cat_id in base_id_map.keys():
             cid = id_map[cat_id]
-            record_lst  = deepcopy(support_set_dict[cid])
+            record_lst = deepcopy(support_set_dict[cid])
             if base_eval_shot > -1:
                 sample_shot = min(len(record_lst), base_eval_shot)
                 # random choosing to avoid chosing all annotations from the same images
@@ -286,11 +297,13 @@ def _gen_dataset_dicts_support_set_filter(imgs_anns, image_root: str, all_id_map
             # separate the list into 10 each
             for i in range(0, total_annos, 10):
                 end = min(i+10, total_annos)
-                datasets_dict.append({"support_set": record_lst[i: end], "len": end - i, "total_len": total_annos, "support_set_target": cid})
+                datasets_dict.append(
+                    {"support_set": record_lst[i: end], "len": end - i, "total_len": total_annos, "support_set_target": cid})
             # delete from the support set which will be used as novel classes
             # TODO: save only novel categories
             # del support_set_dict[cid]
-    return support_set_dict, datasets_dict # the first is for training, we can do random sampling, and the second is for inference
+    # the first is for training, we can do random sampling, and the second is for inference
+    return support_set_dict, datasets_dict
 
     # return support_set_dict
 
@@ -360,7 +373,7 @@ def load_few_shot_lvis_json(json_file, json_root, image_root, metadata, dataset_
     name, meta_training_stage, training_stage, split = dataset_name.split("_")
     meta_learn = True if meta_training_stage == "meta" else False
     if not meta_learn:
-        if training_stage == "finetune": # this will use sample_size on base classes + all novelr
+        if training_stage == "finetune":  # this will use sample_size on base classes + all novelr
             print("finetune stage")
             assert split == "all", f"training split is not 'all', but: {split}"
             return load_lvis_json_sample_k_per_cat(json_file, image_root, metadata, sample_size=global_cfg.MODEL.TFA.TRAIN_SHOT, dataset_name=dataset_name)
@@ -368,18 +381,21 @@ def load_few_shot_lvis_json(json_file, json_root, image_root, metadata, dataset_
             return load_lvis_json_many_shots(json_file, image_root, metadata, dataset_name)
 
     # Meta-learn
-    id_map = metadata["thing_dataset_id_to_contiguous_id"] # current evaluation class ids
-    all_id_map = metadata["all_dataset_id_to_contiguous_id"] # both base and novel class ids
+    # current evaluation class ids
+    id_map = metadata["thing_dataset_id_to_contiguous_id"]
+    # both base and novel class ids
+    all_id_map = metadata["all_dataset_id_to_contiguous_id"]
     # get base classes
     base_id_map = None
-    if meta_learn and training_stage == "val" and split == "all" and global_cfg.MODEL.META_LEARN.USE_ALL_GTS_IN_BASE_CLASSES: # get base classes
+    if meta_learn and training_stage == "val" and split == "all" and global_cfg.MODEL.META_LEARN.USE_ALL_GTS_IN_BASE_CLASSES:  # get base classes
         base_data_split = global_cfg.DATASETS.TRAIN[0].split("_")[-1]
         base_id_map = metadata[f"{base_data_split}_dataset_id_to_contiguous_id"]
     dataset_dicts = {}
     dataset_dicts["metadata"] = copy.deepcopy(metadata)
     # Step 1: Load json file for meta-learning
     # Support set are always processed from instances_train
-    support_set_file = os.path.join(JSON_ANNOTATIONS_DIR, "lvis/lvis_v1_train.json")
+    support_set_file = os.path.join(
+        LVIS_JSON_ANNOTATIONS_DIR, "lvis_v1_train.json")
 
     logger.info(f"{dataset_name}, support set file: {support_set_file}")
     support_set_annotation = _load_lvis_json(support_set_file)
@@ -388,17 +404,18 @@ def load_few_shot_lvis_json(json_file, json_root, image_root, metadata, dataset_
     # In train: query set are from instances_train
     # In test: query set are from instances_val
     json_file = os.path.join(
-        JSON_ANNOTATIONS_DIR, f"lvis/lvis_v1_{training_stage}.json"
+        LVIS_JSON_ANNOTATIONS_DIR, f"lvis_v1_{training_stage}.json"
     )
     logger.info(f"{dataset_name}, query annotation file: {json_file}")
-    query_set_annotation = _load_lvis_json(json_file)  # used for traing or testing
+    query_set_annotation = _load_lvis_json(
+        json_file)  # used for traing or testing
 
     # Step 3: prepare list of data items from annotation, need image_root
     # 1. get support set
     base_eval_shot = global_cfg.MODEL.META_LEARN.BASE_EVAL_SHOT
     support_set_cat_to_list_dict, support_set_list_inference = _gen_dataset_dicts_support_set_filter(
-            support_set_annotation, image_root, all_id_map, id_map, dataset_name, base_eval_shot, base_id_map
-        )
+        support_set_annotation, image_root, all_id_map, id_map, dataset_name, base_eval_shot, base_id_map
+    )
     dataset_dicts.update(
         support_set_cat_to_list_dict
     )
@@ -406,7 +423,8 @@ def load_few_shot_lvis_json(json_file, json_root, image_root, metadata, dataset_
 
     # 2. get query dataset
     # TODO: change it to "query_set"
-    dataset_dicts[-1] = _gen_dataset_dicts(query_set_annotation, image_root, id_map)
+    dataset_dicts[-1] = _gen_dataset_dicts(
+        query_set_annotation, image_root, id_map)
     del support_set_annotation
     del query_set_annotation
     return dataset_dicts
@@ -427,6 +445,7 @@ def register_meta_learn_lvis(name, metadata, imgdir, jsondir, annofile):
         ),
     )
     return copy.deepcopy(metadata)
+
 
 if __name__ == "__main__":
     """
