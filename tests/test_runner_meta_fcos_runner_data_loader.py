@@ -7,7 +7,7 @@ import pkg_resources
 import torch
 from d2go.runner import create_runner
 from detectron2.utils.logger import setup_logger
-from libfb.py import parutil
+# from libfb.py import parutil
 from sylph.runner.meta_fcos_runner import MetaFCOSRunner  # noqa
 from sylph.utils import create_cfg
 from detectron2.config import set_global_cfg
@@ -88,7 +88,8 @@ class TestFewShotDataLoader(unittest.TestCase):
 
     def test_few_shot_test_support_set_base(self):
         dataset_name = "lvis_meta_val_all"
-        self.cfg.MODEL.META_LEARN.BASE_EVAL_SHOT=-1 # inference use all exampels to generate the code, 10 images at a time
+        # inference use all exampels to generate the code, 10 images at a time
+        self.cfg.MODEL.META_LEARN.BASE_EVAL_SHOT = -1
         self.cfg.MODEL.META_LEARN.USE_ALL_GTS_IN_BASE_CLASSES = True
         set_global_cfg(self.cfg)
 
@@ -113,7 +114,8 @@ class TestFewShotDataLoader(unittest.TestCase):
                 len(data_batch), 1, "test data loader only load one at a time"
             )
             keys = data_batch[0].keys()
-            logger.info(f"keys: {keys}, len: {data_batch[0]['len']}, total_len: {data_batch[0]['total_len']}, total dataset dict: {len(data_loader)}")
+            logger.info(
+                f"keys: {keys}, len: {data_batch[0]['len']}, total_len: {data_batch[0]['total_len']}, total dataset dict: {len(data_loader)}")
             self.assertTrue("support_set_target" in keys)
             self.assertTrue("support_set" in keys)
             self.assertTrue("class_name" in keys)
@@ -179,3 +181,7 @@ class TestFewShotDataLoader(unittest.TestCase):
     #         print(len(data_batch), data_batch)
     #         self.assertEqual(len(data_batch), 1)
     #         self.assertTrue(isinstance(data_batch[0], dict), "data has wrong data type")
+
+
+if __name__ == "__main__":
+    unittest.main()

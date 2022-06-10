@@ -185,6 +185,14 @@ def prepare_for_launch(args):
         cfg.merge_from_list(args.opts)
     else:
         cfg = create_cfg_from_cli_args(args, default_cfg=cfg)
+    # modify training steps if
+    import os
+    if os.environ.get('SYLPH_TEST_MODE', default="False"):
+        logger.warn(
+            "SYLPH_TEST_MODE on, using one machine, batch size 2, steps 10")
+        cfg.SOLVER.IMS_PER_BATCH = 2
+        cfg.SOLVER.MAX_ITER = 10
+        cfg.SOLVER.REFERENCE_WORLD_SIZE = 1
     set_global_cfg(cfg)
 
     cfg.freeze()

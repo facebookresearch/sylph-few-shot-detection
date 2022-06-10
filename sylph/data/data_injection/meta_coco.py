@@ -275,8 +275,8 @@ def load_pretrain_coco_json(json_file, json_root, image_root, metadata, dataset_
             imgs_anns, image_root, ann_keys, id_map)
     import os
     if os.environ.get('SYLPH_TEST_MODE', default="False"):
-        logger.info(
-            "SYLPH_TEST_MODE on, only load 10 images in pretraining stage")
+        logger.warn(
+            "SYLPH_TEST_MODE on, only load 10 images in pretraining stage, both train and val will be impacted")
         return copy.deepcopy(dataset_dicts[0:10])
     return dataset_dicts
 

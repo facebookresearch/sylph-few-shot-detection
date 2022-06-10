@@ -27,11 +27,11 @@ DATASETS:
 # TEST:
 #   EVAL_PERIOD: 5000
 SOLVER:
-  IMS_PER_BATCH: 2 # 128
+  IMS_PER_BATCH: 128
   BASE_LR: 0.01  # Note that RetinaNet uses a different default learning rate
   STEPS: (60000, 80000)
-  MAX_ITER: 10 #90000
-  REFERENCE_WORLD_SIZE: 1 # 64
+  MAX_ITER: 90000
+  REFERENCE_WORLD_SIZE: 64
   CHECKPOINT_PERIOD: 10000
 
   # LR_MULTIPLIER_OVERWRITE, [{'backbone': 0.1}, {'reference_points': 0.1, 'sampling_offsets': 0.1}]
@@ -43,7 +43,7 @@ D2GO_DATA:
       'ResizeScaleOp::{"min_scale": 0.1, "max_scale": 2.0, "target_height": 1024, "target_width": 1024}',
       "RandomFlipOp",
       'FixedSizeCropOp::{"crop_size": [1024, 1024]}',
-      # 'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}', # TODO: internal
+      # 'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}', # TODO: not supported in OS version
     ]
     TEST: ["ResizeShortestEdgeOp"]
 
