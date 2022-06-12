@@ -24,12 +24,10 @@ This file contains functions to parse COCO-format annotations into dicts in "Det
 
 __all__ = ["register_meta_learn_coco"]
 
-# JSON_ANNOTATIONS_DIR = (
-#     "manifold://fair_vision_data/tree/detectron2/json_dataset_annotations/"
-# )
-from .dataset_path_config import COCO_JSON_ANNOTATIONS_DIR, COCO_IMAGE_ROOT_DIR
-
-# COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR = "manifold://fai4ar/tree/datasets/coco_meta_learn/"
+JSON_ANNOTATIONS_DIR = (
+    "manifold://fair_vision_data/tree/detectron2/json_dataset_annotations/"
+)
+COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR = "manifold://fai4ar/tree/datasets/coco_meta_learn/"
 logger = logging.getLogger(__name__)
 
 
@@ -91,7 +89,6 @@ def _gen_dataset_dicts_support_set(imgs_anns, image_root, cid, did):
     """
     Given a contingous class id and category dataset id, get a dataset_dicts
     containing annotation of only one category.
-
     Used to sample support set images and query set images id(since we know it is
     positive for this class). Because query images can have annotations of other classes
     within an episode, we later replace its annotation with a full-on list and filter
@@ -210,21 +207,16 @@ def _gen_dataset_dicts_ann_by_category(imgs_anns, image_root, id_map, sample_siz
     return record_dict
 
 
-def load_pretrain_coco_json(json_file, image_root, metadata, dataset_name):
-    logger.info(f"load_pretrain_coco_json: {json_file}")
-
+def load_pretrain_coco_json(json_file, json_root, image_root, metadata, dataset_name):
     name, meta_training_stage, training_stage, split = dataset_name.split("_")
     imgs_anns = _read_json_file(json_file)
     id_map = metadata["thing_dataset_id_to_contiguous_id"]
     ann_keys = ["iscrowd", "bbox", "category_id"]
     # convert each annotation to record, filter the annotation by id_map
-    logger.info(f"Pretraining {training_stage} stage")
     if training_stage == "train":
         if split == "base" or split == "novel":
             dataset_dicts = _gen_dataset_dicts(
                 imgs_anns, image_root, ann_keys, id_map)
-            logger.info(f"training on {split} split.")
-
         elif split == "all":
             print(
                 f"joint training on all classes, where global_cfg.MODEL.TFA.TRAIN_SHOT is set to {global_cfg.MODEL.TFA.TRAIN_SHOT}")
@@ -275,15 +267,10 @@ def load_pretrain_coco_json(json_file, image_root, metadata, dataset_name):
     else:  # "val"  for validation, always use all annotations
         dataset_dicts = _gen_dataset_dicts(
             imgs_anns, image_root, ann_keys, id_map)
-    import os
-    if os.environ.get('SYLPH_TEST_MODE', default="False"):
-        logger.warn(
-            "SYLPH_TEST_MODE on, only load 10 images in pretraining stage, both train and val will be impacted")
-        return copy.deepcopy(dataset_dicts[0:10])
     return dataset_dicts
 
 
-def load_few_shot_coco_json(json_file, image_root, metadata, dataset_name):
+def load_few_shot_coco_json(json_file, json_root, image_root, metadata, dataset_name):
     """
     Load a json file with COCO's instances annotation format.
     Currently supports instance detection.
@@ -291,6 +278,7 @@ def load_few_shot_coco_json(json_file, image_root, metadata, dataset_name):
         json_file (str): full path to the json file in COCO instances annotation format.
                          Only used for pretraining
                          Fixated in the function for support set and query set
+        json_root (str): Only used for pretraining
         image_root (str): the directory where the images in this json file exists.
                           Only set for support set, for query set, its hard written here
         metadata: meta data associated with dataset_name
@@ -306,52 +294,66 @@ def load_few_shot_coco_json(json_file, image_root, metadata, dataset_name):
     """
     name, meta_training_stage, training_stage, split = dataset_name.split("_")
     meta_learn = True if meta_training_stage == "meta" else False
+    strict = False
+    logger.info(f"Using strict dataset: {strict}")
     if not meta_learn:
         return load_pretrain_coco_json(
-            json_file, image_root, metadata, dataset_name
+            json_file, json_root, image_root, metadata, dataset_name
         )
 
     dataset_dicts = {}
     dataset_dicts["metadata"] = copy.deepcopy(metadata)
-
     # Step 1: Load json file for meta-learning
     # Support set are always processed from instances_train
+    # if strict:
+    #     if "base" in dataset_name:
+    #         support_set_file = os.path.join(
+    #             COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR,
+    #             "coco/base_instances_train2017.json",
+    #         )
+    #     else:  # val should be able to pure val and val+base
+    #         support_set_file = os.path.join(
+    #             COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR,
+    #             "coco/novel_instances_train2017.json",
+    #         )
     support_set_file = os.path.join(
-        COCO_JSON_ANNOTATIONS_DIR, "instances_train2017.json"
+        JSON_ANNOTATIONS_DIR, "coco/instances_train2017.json"
     )
     logger.info(f"{dataset_name}, support set file: {support_set_file}")
     support_set_annotation = _read_json_file(support_set_file)
-    logger.info(f"{dataset_name}, done loading: {support_set_file}")
 
     # Step 2. prepare annotations/images for query set
     # In train: query set are from instances_train
     # In test: query set are from instances_val
     query_json_file = os.path.join(
-        COCO_JSON_ANNOTATIONS_DIR, f"instances_{training_stage}2017.json"
+        JSON_ANNOTATIONS_DIR, f"coco/instances_{training_stage}2017.json"
     )
-    query_image_root = os.path.join(
-        COCO_IMAGE_ROOT_DIR, f"{training_stage}2017")
+    query_image_root = (
+        f"memcache_manifold://fair_vision_data/tree/coco_{training_stage}2017"
+    )
     # in meta-training/finetuning stage: use this for query set reference
     logger.info(f"{dataset_name}, query annotation file: {query_json_file}")
     query_set_annotation = _read_json_file(
         query_json_file
     )  # used for traing or testing
-    logger.info("done reading json file")
+
     id_map = metadata["thing_dataset_id_to_contiguous_id"]
     ann_keys = ["iscrowd", "bbox", "category_id"]
 
     # Step 3: prepare list of data items from annotation, need image_root
+    # 1. get support set
+    # if strict:
+    #     for did, cid in metadata["thing_dataset_id_to_contiguous_id"].items():
+    #         dataset_dicts[cid] = _gen_dataset_dicts_support_set(
+    #             support_set_annotation, image_root, cid, did
+    #         )
+    # else:
     dataset_dicts.update(
         _gen_dataset_dicts_support_set_filter(
             support_set_annotation, image_root, id_map
         )
     )
-    logger.info(
-        f"Done preparing a list of datasets_dict for support set,  len: {len(dataset_dicts)}")
-
     if split == "all":  # downsample
-        logger.info(f"{split} split")
-
         novel_id_map = metadata["novel_thing_dataset_id_to_contiguous_id"]
         for ndid in novel_id_map.keys():
             cid = id_map[ndid]
@@ -362,16 +364,37 @@ def load_few_shot_coco_json(json_file, image_root, metadata, dataset_name):
     dataset_dicts[-1] = _gen_dataset_dicts(
         query_set_annotation, query_image_root, ann_keys, id_map
     )
-    logger.info(
-        f"Done preparing a list of datasets_dict for query set, len: {len(dataset_dicts[-1])}")
-    # Downsample the validation size while in testing mode
-    if os.environ.get("SYLPH_TEST_MODE", default=False) and training_stage == "val":
-        dataset_dicts[-1] = copy.deepcopy(dataset_dicts[-1][0:10])
-        logger.info("Downsample the validation size to only 10.")
+    # If it is validation, we save json file that only has novel or base classes for evaluator
+    # TODO: delete the following code
+    # From here is to support Xinyu's repeat tests
+    predefined_test_support_set_mapper = {
+        "coco_meta_val_base": os.path.join(
+            COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR,
+            "coco/coco_meta_val_base_support_set.json",
+        ),
+        "coco_meta_val_novel": os.path.join(
+            COCO_FEW_SHOT_JSON_ANNOTATIONS_DIR,
+            "coco/coco_meta_val_novel_support_set.json",
+        ),
+    }
+    if dataset_name in predefined_test_support_set_mapper:
+        test_support_set_anno_path = predefined_test_support_set_mapper[dataset_name]
+        assert PathManager.exists(
+            test_support_set_anno_path
+        ), f"File {test_support_set_anno_path} does not exist."
+        logger.info(f"load test support set {test_support_set_anno_path}")
+        test_support_set_anno_path = PathManager.get_local_path(
+            test_support_set_anno_path, force=True
+        )
+        with open(test_support_set_anno_path, "r") as f:
+            test_support_set_anno = json.load(f)  # Dict
+            # test support set anno's structure:
+            # [${x}shot][seed${y}][${class_name}]
+        dataset_dicts["test_support_set_anno"] = test_support_set_anno
     return dataset_dicts
 
 
-def register_meta_learn_coco(name, metadata, imgdir, annofile):
+def register_meta_learn_coco(name, metadata, imgdir, jsondir, annofile):
     split = name.split("_")[-1]  # base/novel/all
     print(f"coco split: {split}")
     metadata["thing_dataset_id_to_contiguous_id"] = metadata[
@@ -383,7 +406,7 @@ def register_meta_learn_coco(name, metadata, imgdir, annofile):
     DatasetCatalog.register(
         name,
         lambda: load_few_shot_coco_json(
-            annofile, imgdir, copy.deepcopy(metadata), name
+            annofile, jsondir, imgdir, copy.deepcopy(metadata), name
         ),
     )
     return copy.deepcopy(metadata)

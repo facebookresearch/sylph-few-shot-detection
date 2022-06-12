@@ -428,6 +428,11 @@ def load_few_shot_lvis_json(json_file, json_root, image_root, metadata, dataset_
     # TODO: change it to "query_set"
     dataset_dicts[-1] = _gen_dataset_dicts(
         query_set_annotation, image_root, id_map)
+    # Downsample the validation size while in testing mode
+    if os.environ.get("SYLPH_TEST_MODE", default=False):
+        dataset_dicts[-1] = deepcopy(dataset_dicts[-1][0:10])
+        logger.info("Downsample the validation size to only 10.")
+
     del support_set_annotation
     del query_set_annotation
     return dataset_dicts

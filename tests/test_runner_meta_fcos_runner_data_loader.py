@@ -7,7 +7,6 @@ import pkg_resources
 import torch
 from d2go.runner import create_runner
 from detectron2.utils.logger import setup_logger
-# from libfb.py import parutil
 from sylph.runner.meta_fcos_runner import MetaFCOSRunner  # noqa
 from sylph.utils import create_cfg
 from detectron2.config import set_global_cfg
@@ -22,10 +21,6 @@ def once_setup():
     config_file = pkg_resources.resource_filename(
         "sylph", os.path.join("configs", config_file)
     )
-    logger.info(f"config_file {config_file}")
-
-    # config_file = parutil.get_file_path(config_file)
-
     logger.info(f"config_file {config_file}")
 
     runner = create_runner("sylph.runner.MetaFCOSRunner")

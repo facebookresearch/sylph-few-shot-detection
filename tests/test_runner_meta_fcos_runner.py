@@ -10,7 +10,6 @@ from d2go.runner import create_runner
 from detectron2.config import set_global_cfg
 from detectron2.data import MetadataCatalog
 from detectron2.utils.logger import setup_logger
-from libfb.py import parutil
 from sylph.evaluation.meta_learn_evaluation import inference_on_support_set_dataset_base
 from sylph.runner.meta_fcos_runner import MetaFCOSRunner  # noqa
 from sylph.utils import create_cfg
@@ -19,19 +18,17 @@ logger = logging.getLogger(__name__)
 
 
 def once_setup(config_file: str):
-    # config_file = "LVIS-Meta-FCOS-Detection/Meta_FCOS_MS_R_50_1x.yaml"
+    # set environment
+    os.environ.get("SYLPH_TEST_MODE", default=True)
     config_file = pkg_resources.resource_filename(
         "sylph.model_zoo", os.path.join("configs", config_file)
     )
-    config_file = parutil.get_file_path(config_file)
 
     logger.info(f"config_file {config_file}")
 
     runner = create_runner("sylph.runner.MetaFCOSRunner")
     default_cfg = runner.get_default_cfg()
     lvis_cfg = create_cfg(default_cfg, config_file, None)
-    # register dataset
-    # runner.register(lvis_cfg)
 
     logger.info(f"cfg {lvis_cfg}")
     return runner, default_cfg
@@ -48,24 +45,24 @@ class TestMetaFCOS(unittest.TestCase):
             self.default_cfg.MODEL.DEVICE = "cpu"
         self.default_cfg.TEST.EVAL_PERIOD = 0  # do not test
         self.default_cfg.SOLVER.IMS_PER_BATCH = 2
-        # self.default_cfg.MODEL.META_LEARN.SHOT = 2
-        self.default_cfg.DATALOADER.NUM_WORKERS = 0 # avoid broken pipe
+        self.default_cfg.DATALOADER.NUM_WORKERS = 0  # avoid broken pipe
         set_global_cfg(self.default_cfg)
 
         model = self.runner.build_model(self.default_cfg)
         model.train(True)
         # # # setup data loader
         if not self.default_cfg.MODEL.META_LEARN.EPISODIC_LEARNING:  # for pretraining
-            data_loader = MetaFCOSRunner.build_detection_train_loader(self.default_cfg)
+            data_loader = MetaFCOSRunner.build_detection_train_loader(
+                self.default_cfg)
         else:
             data_loader = MetaFCOSRunner.build_episodic_learning_detection_train_loader(
                 self.default_cfg
             )
         # Remove the output directory
-        if os.path.exists("./output"):
+        if os.path.exists("./test_output"):
             import shutil
 
-            shutil.rmtree("./output")
+            shutil.rmtree("./test_output")
         self._data_loader_iter = iter(data_loader)
 
         # test run_step
@@ -90,7 +87,6 @@ class TestMetaFCOS(unittest.TestCase):
         model.train(False)
         self.runner.do_test(self.default_cfg, model, train_iter=None)
 
-
     def _do_meta_learn_train(self):
         # Reset train iterations
         self.default_cfg.SOLVER.MAX_ITER = 1
@@ -106,16 +102,17 @@ class TestMetaFCOS(unittest.TestCase):
         model.train(True)
         # # # setup data loader
         if not self.default_cfg.MODEL.META_LEARN.EPISODIC_LEARNING:  # for pretraining
-            data_loader = MetaFCOSRunner.build_detection_train_loader(self.default_cfg)
+            data_loader = MetaFCOSRunner.build_detection_train_loader(
+                self.default_cfg)
         else:
             data_loader = MetaFCOSRunner.build_episodic_learning_detection_train_loader(
                 self.default_cfg
             )
         # Remove the output directory
-        if os.path.exists("./output"):
+        if os.path.exists("./test_output"):
             import shutil
 
-            shutil.rmtree("./output")
+            shutil.rmtree("./test_output")
         self._data_loader_iter = iter(data_loader)
 
         # test run_step
@@ -148,8 +145,6 @@ class TestMetaFCOS(unittest.TestCase):
         self.default_cfg.MODEL.META_LEARN.SHOT = 2
         self.default_cfg.DATALOADER.NUM_WORKERS = 0
 
-
-
     def _few_shot_test(
         self,
         data_loader_fun,
@@ -172,7 +167,8 @@ class TestMetaFCOS(unittest.TestCase):
         with torch.enable_grad():
             data = next(self._data_loader_iter)
             if run_type == "meta_learn_test_instance":
-                instances = model(data, class_code=class_code, run_type=run_type)
+                instances = model(
+                    data, class_code=class_code, run_type=run_type)
             elif run_type == "meta_learn_test_support":
                 instances = model(data, run_type=run_type)
             else:
@@ -212,7 +208,8 @@ class TestMetaFCOS(unittest.TestCase):
         # generate fake class codes
         class_codes = []
         for _ in range(3):
-            class_code = {'class_code': {'cls_conv': torch.rand(1, 256, 1, 1), 'cls_bias': torch.rand(1)}}
+            class_code = {'class_code': {'cls_conv': torch.rand(
+                1, 256, 1, 1), 'cls_bias': torch.rand(1)}}
             class_codes.append(class_code)
         model = self.runner.build_model(self.default_cfg)
         model.train(False)
@@ -220,7 +217,6 @@ class TestMetaFCOS(unittest.TestCase):
         self.assertTrue(isinstance(class_codes, List))
         self.assertTrue(len(class_codes) == 3)
         logger.info(f" normalized class codes: {class_codes}")
-
 
     # @unittest.skipIf(not torch.cuda.is_available(), "cuda is not available")
     # def test_runner_lvis_meta_learn_test_class_codes(self):
@@ -307,3 +303,5 @@ class TestMetaFCOS(unittest.TestCase):
     #     config_file = "LVISv1-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml"
     #     self.runner, self.default_cfg = once_setup(config_file)
     #     self._do_meta_learn_evaluation()
+if __name__ == "__main__":
+    unittest.main()

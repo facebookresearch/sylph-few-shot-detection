@@ -50,10 +50,11 @@ Specify    `--config-file` and `--runner` in `tools/run.py`.
 `configs="sylph://LVIS-Meta-FCOS-Detection/Meta_FCOS_MS_R_50_1x.yaml"`
 
 # Prepare data
-Download coco images:
+Download coco images and annotations from here: https://cocodataset.org/#download. 
 ```
 wget http://images.cocodataset.org/zips/train2017.zip
 wget http://images.cocodataset.org/zips/val2017.zip
+wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
 ```
 ## Expected dataset structure for COCO:
 ```
@@ -65,9 +66,11 @@ coco/
 ```
 
 ## Expected dataset structure for LVIS:
+Download annotation from here: https://www.lvisdataset.org/dataset. 
+It uses the same image dir as coco. 
 ```
-wget http://images.cocodataset.org/zips/train2017.zip
-wget http://images.cocodataset.org/zips/val2017.zip
+wget https://s3-us-west-2.amazonaws.com/dl.fbaipublicfiles.com/LVIS/lvis_v1_train.json.zip
+wget https://s3-us-west-2.amazonaws.com/dl.fbaipublicfiles.com/LVIS/lvis_v1_val.json.zip
 ```
 ```
 coco/
@@ -76,27 +79,23 @@ lvis/
   lvis_v1_{train,val}.json
 ```
 
-# Train
+# Sylph Few-shot detection Train & Eval
 ## Command
 Under folder  `sylph/tools`. Run `run.py`. Main change includes: `--config-file`, `--runner`.
 ### Train Meta-FCOS
-We provide test mode, where the number of steps, number of gpus, and batch size is gonna be decreased to test the workflow end to end.
-`export SYLPH_TEST_MODE=true"
+We provide test mode, where the number of steps, number of gpus, and batch size is set to very small number to test the workflow end to end. Use
+`export SYLPH_TEST_MODE=true` to turn it on.
 #### COCO
-Pretraining
-```
-./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml"     --entitlement ar_rp_vll     --name "coco_pretraining"     --nodes 1 --num-gpus 8   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar     --canary --async-val --runner "sylph.runner.MetaFCOSRunner"
-```
-
+Pretraining on 60 base classes.
 ```
 python3 tools/train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml" --num-processes 3  --output-dir output/meta-fcos/coco/pretrain/
 ```
 
-Meta-learning.
+Meta-learning on 60 base clss, and meta-test on 20
 
 First, find the weight checkpoint you want to use from pretraining, and modify `MODEL.WEIGHTS`.
 ```
-python3 tools/train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml" --num-processes 3  --output-dir output/meta-fcos/coco/meta-train/ MODEL.WEIGHTS output/meta-fcos/coco/meta-train/WS_iFSD_imagenet1000x100gt/model_final.pth
+python3 tools/train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://COCO-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml" --num-processes 3  --output-dir output/meta-fcos/coco/meta-train/ MODEL.WEIGHTS output/meta-fcos/coco/pretrain/model_final.pth
 ```
 
 
@@ -111,14 +110,5 @@ Meta-leraning. Init the weights to the `pth` model in pretraining stage.
 ./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://LVISv1-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml"     --entitlement ar_rp_vll     --name "lvis_meta_learn"     --nodes 4 --num-gpus 4   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar     --canary --async-val --runner "sylph.runner.MetaFCOSRunner"
 ```
 To change code generator, change config file and switch to a different Runner (TODO: merge them together to support differnt code generator in the same runner)
-### Train Mask RCNN
-Switch runner to "sylph.runner.MetaFasterRCNNRunner".
 
-Pretraining
-```
-./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://LVISv1-Detection/Meta-RCNN/Meta-RCNN-FPN-pretrain.yaml"     --entitlement ar_rp_vll     --name "lvis_pretraining"     --nodes 8 --num-gpus 8   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar     --canary --async-val --runner "sylph.runner.MetaFasterRCNNRunner"
-```
-Meta_learning
-```
-./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://LVISv1-Detection/Meta-RCNN/Meta-RCNN-FPN-finetune.yaml"     --entitlement ar_rp_vll     --name "lvis_meta_learn"     --nodes 4 --num-gpus 4   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar     --canary --async-val --runner "sylph.runner.MetaFasterRCNNRunner"
-```
+# TFA-FCOS Train & Eval

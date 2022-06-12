@@ -2,7 +2,7 @@
 _BASE_: "Base-FCOS.yaml"
 MODEL:
   META_ARCHITECTURE: "MetaOneStageDetector"
-  WEIGHTS: "manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test/20211104222711/e2e_train/model_final.pth" 
+  # WEIGHTS:
   DDP_FIND_UNUSED_PARAMETERS: True
   BACKBONE:
     NAME: "build_fcos_resnet_fpn_backbone"
@@ -11,7 +11,6 @@ MODEL:
     NUM_CLASSES: 60
   PROPOSAL_GENERATOR:
     NAME: "MetaFCOS"
-    # FREEZE: False
     FREEZE_CLS_TOWER: False
     FREEZE_BBOX_BRANCH: True
   META_LEARN:
