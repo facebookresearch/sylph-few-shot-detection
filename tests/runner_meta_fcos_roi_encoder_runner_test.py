@@ -7,7 +7,6 @@ import pkg_resources
 import torch
 from d2go.runner import create_runner
 from detectron2.utils.logger import setup_logger
-from libfb.py import parutil
 from sylph.runner.meta_fcos_roi_encoder_runner import MetaFCOSROIEncoderRunner  # noqa
 from sylph.utils import create_cfg
 
@@ -15,11 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 def once_setup(config_file: str):
-    # config_file = "LVIS-Meta-FCOS-Detection/Meta_FCOS_MS_R_50_1x.yaml"
     config_file = pkg_resources.resource_filename(
-        "sylph.model_zoo", os.path.join("configs", config_file)
+        "sylph", os.path.join("configs", config_file)
     )
-    config_file = parutil.get_file_path(config_file)
 
     logger.info(f"config_file {config_file}")
 
@@ -109,7 +106,7 @@ class TestMetaFCOS(unittest.TestCase):
             loss_dict = model(data)
             self.assertTrue(isinstance(loss_dict, dict))
 
-    #@unittest.skipIf(not torch.cuda.is_available(), "cuda is not available")
+    # @unittest.skipIf(not torch.cuda.is_available(), "cuda is not available")
     def test_runner_lvis_pretrain(self):
         # TODO: replace this to default configs
         config_file = "LVISv1-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml"

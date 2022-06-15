@@ -103,11 +103,11 @@ python3 tools/train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "s
 
 Pretraining
 ```
-./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://LVISv1-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml"     --entitlement ar_rp_vll     --name "lvis_pretraining"     --nodes 1 --num-gpus 8   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar    --async-val --canary --runner "sylph.runner.MetaFCOSRunner"
+python3 tools/train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://LVISv1-Detection/Meta-FCOS/Meta-FCOS-pretrain.yaml" --num-processes 3  --output-dir output/meta-fcos/lvis/pretrain/
 ```
 Meta-leraning. Init the weights to the `pth` model in pretraining stage.
 ```
-./run.py     --workflow meta_fcos_e2e_workflow    --config-file "sylph://LVISv1-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml"     --entitlement ar_rp_vll     --name "lvis_meta_learn"     --nodes 4 --num-gpus 4   --gpu-type V100_32G     --output-dir manifold://fai4ar/tree/liyin/few-shot/meta-fcos/test     --run-as-secure-group oncall_fai4ar     --canary --async-val --runner "sylph.runner.MetaFCOSRunner"
+python3 tools/train_net.py --runner sylph.runner.MetaFCOSRunner --config-file "sylph://LVISv1-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml" --num-processes 3  --output-dir output/meta-fcos/lvis/meta-train/ MODEL.WEIGHTS output/meta-fcos/coco/pretrain/model_final.pth
 ```
 To change code generator, change config file and switch to a different Runner (TODO: merge them together to support differnt code generator in the same runner)
 

@@ -9,7 +9,6 @@ import torch
 from d2go.runner import create_runner
 from detectron2.utils.events import EventStorage
 from detectron2.utils.logger import setup_logger
-from libfb.py import parutil
 from sylph.runner.meta_faster_rcnn_runner import MetaFasterRCNNRunner  # noqa
 from sylph.utils import create_cfg
 from detectron2.config import set_global_cfg
@@ -21,9 +20,8 @@ logger = logging.getLogger(__name__)
 def once_setup(config_file: str):
     # config_file = "LVIS-Meta-FCOS-Detection/Meta_FCOS_MS_R_50_1x.yaml"
     config_file = pkg_resources.resource_filename(
-        "sylph.model_zoo", os.path.join("configs", config_file)
+        "sylph", os.path.join("configs", config_file)
     )
-    config_file = parutil.get_file_path(config_file)
 
     logger.info(f"config_file {config_file}")
 
@@ -91,7 +89,7 @@ class TestMetaFasterRCNNRunner(unittest.TestCase):
         self.default_cfg.TEST.EVAL_PERIOD = 0  # do not test
         self.default_cfg.SOLVER.IMS_PER_BATCH = 2
         self.default_cfg.MODEL.META_LEARN.SHOT = 2
-        self.default_cfg.DATALOADER.NUM_WORKERS = 0 # avoids broken pipe error
+        self.default_cfg.DATALOADER.NUM_WORKERS = 0  # avoids broken pipe error
 
         model = self.runner.build_model(self.default_cfg)
         model.train(False)
@@ -135,7 +133,7 @@ class TestMetaFasterRCNNRunner(unittest.TestCase):
         self.default_cfg.TEST.EVAL_PERIOD = 0  # do not test
         self.default_cfg.SOLVER.IMS_PER_BATCH = 2
         self.default_cfg.MODEL.META_LEARN.SHOT = 2
-        self.default_cfg.DATALOADER.NUM_WORKERS = 0 # avoids broken pipe error
+        self.default_cfg.DATALOADER.NUM_WORKERS = 0  # avoids broken pipe error
 
         model = self.runner.build_model(self.default_cfg)
         model.train(True)
@@ -184,7 +182,7 @@ class TestMetaFasterRCNNRunner(unittest.TestCase):
         self.default_cfg.TEST.EVAL_PERIOD = 0  # do not test
         self.default_cfg.SOLVER.IMS_PER_BATCH = 2
         self.default_cfg.MODEL.META_LEARN.SHOT = 2
-        self.default_cfg.DATALOADER.NUM_WORKERS = 0 # avoids broken pipe error
+        self.default_cfg.DATALOADER.NUM_WORKERS = 0  # avoids broken pipe error
         self.default_cfg.MODEL.META_LEARN.CODE_GENERATOR.OUT_CHANNEL = 1024
 
     def _few_shot_test(
@@ -210,7 +208,8 @@ class TestMetaFasterRCNNRunner(unittest.TestCase):
             with torch.enable_grad():
                 data = next(self._data_loader_iter)
                 if run_type == "meta_learn_test_instance":
-                    instances = model(data, class_code=class_code, run_type=run_type)
+                    instances = model(
+                        data, class_code=class_code, run_type=run_type)
                 else:
                     instances = model(data, run_type=run_type)
                 logger.info(f"instances: {instances} ")

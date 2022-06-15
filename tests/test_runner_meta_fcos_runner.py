@@ -21,7 +21,7 @@ def once_setup(config_file: str):
     # set environment
     os.environ.get("SYLPH_TEST_MODE", default=True)
     config_file = pkg_resources.resource_filename(
-        "sylph.model_zoo", os.path.join("configs", config_file)
+        "sylph", os.path.join("configs", config_file)
     )
 
     logger.info(f"config_file {config_file}")
@@ -33,7 +33,7 @@ def once_setup(config_file: str):
     logger.info(f"cfg {lvis_cfg}")
     return runner, default_cfg
 
-
+# TODO: change this to support test on 
 class TestMetaFCOS(unittest.TestCase):
     def setUp(self):
         setup_logger()
@@ -158,10 +158,10 @@ class TestMetaFCOS(unittest.TestCase):
         # # # setup data loader
         data_loader = data_loader_fun(**kwargs)
         # Remove the output directory
-        if os.path.exists("./output"):
+        if os.path.exists("./test_output"):
             import shutil
 
-            shutil.rmtree("./output")
+            shutil.rmtree("./test_output")
         self._data_loader_iter = iter(data_loader)
         # test run_step
         with torch.enable_grad():
@@ -176,7 +176,7 @@ class TestMetaFCOS(unittest.TestCase):
             logger.info(f"instances: {instances} ")
             return instances
 
-    @unittest.skipIf(not torch.cuda.is_available(), "cuda is not available")
+    # @unittest.skipIf(not torch.cuda.is_available(), "cuda is not available")
     def test_runner_lvis_meta_learn_test_instances(self):
         self._setup_few_shot_configs()
         toy_class_codes = {
@@ -200,7 +200,7 @@ class TestMetaFCOS(unittest.TestCase):
         )
         self.assertTrue(isinstance(instances, List))
 
-    @unittest.skipIf(not torch.cuda.is_available(), "cuda is not available")
+    # @unittest.skipIf(not torch.cuda.is_available(), "cuda is not available")
     def test_runner_forward_normalize_codes(self):
         from sylph.evaluation.meta_learn_evaluation import inference_normalization
         self._setup_few_shot_configs()

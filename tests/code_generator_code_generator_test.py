@@ -8,11 +8,9 @@ import torch
 from d2go.runner import create_runner
 from detectron2.modeling import build_model
 from detectron2.utils.logger import setup_logger
-from libfb.py import parutil
 from sylph.runner.meta_fcos_runner import MetaFCOSRunner  # noqa
 from sylph.utils import create_cfg
 from detectron2.config import set_global_cfg
-
 
 
 logger = logging.getLogger(__name__)
@@ -21,9 +19,8 @@ logger = logging.getLogger(__name__)
 def once_setup():
     config_file = "LVISv1-Detection/Meta-FCOS/Meta-FCOS-finetune.yaml"
     config_file = pkg_resources.resource_filename(
-        "sylph.model_zoo", os.path.join("configs", config_file)
+        "sylph", os.path.join("configs", config_file)
     )
-    config_file = parutil.get_file_path(config_file)
 
     logger.info(f"config_file {config_file}")
 
@@ -84,11 +81,14 @@ class TestCodeGenerator(unittest.TestCase):
         )
         for _ in range(num_iterators):
             batched_input = next(data_loader_iter)
-            class_codes = arch_model(batched_input, run_type="meta_learn_test_support")
+            class_codes = arch_model(
+                batched_input, run_type="meta_learn_test_support")
             keys = class_codes.keys()
             logger.info(keys)
             self.assertTrue("cls_conv" in keys)
             self.assertTrue("cls_bias" in keys)
             logger.info(f"cls bias size: {class_codes['cls_bias'].size()}")
-            self.assertTrue(class_codes["cls_conv"].size() == class_kernel_size)
-            self.assertTrue(class_codes["cls_bias"].size() == torch.Size((1,1,1,1)))
+            self.assertTrue(
+                class_codes["cls_conv"].size() == class_kernel_size)
+            self.assertTrue(
+                class_codes["cls_bias"].size() == torch.Size((1, 1, 1, 1)))

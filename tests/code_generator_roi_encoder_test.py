@@ -11,8 +11,6 @@ from detectron2.structures.boxes import Boxes
 from detectron2.structures.instances import Instances
 from detectron2.utils.logger import setup_logger
 
-# from egodet.runner.detr_runner import EgoDETRRunner  # noqa
-from libfb.py import parutil
 from sylph.modeling.code_generator.roi_encoder import ROIEncoder
 from sylph.runner import MetaFCOSROIEncoderRunner  # noqa
 
@@ -22,9 +20,8 @@ logger = logging.getLogger(__name__)
 def once_setup():
     config_file = "LVISv1-Detection/Meta-FCOS/Meta-FCOS-ROI-Encoder-finetune.yaml"
     config_file = pkg_resources.resource_filename(
-        "sylph.model_zoo", os.path.join("configs", config_file)
+        "sylph", os.path.join("configs", config_file)
     )
-    config_file = parutil.get_file_path(config_file)
 
     logger.info(f"config_file {config_file}")
 
@@ -68,14 +65,16 @@ class TestROIEncoder(unittest.TestCase):
         height, width = 1024, 1024
         # feature_shape = [] # feature size from FPN
 
-        spatial_shapes = [[height // stride, width // stride] for stride in strides]
+        spatial_shapes = [[height // stride, width // stride]
+                          for stride in strides]
         spatial_shapes = torch.as_tensor(spatial_shapes)
 
         # (batch_size*num_shots, channels, height, width)
         # view(0, height * width, channels)
 
         support_set_image_features = [
-            torch.rand(batch_size * num_shots, channels, h, w).to(self.cfg.MODEL.DEVICE)
+            torch.rand(batch_size * num_shots, channels,
+                       h, w).to(self.cfg.MODEL.DEVICE)
             for h, w in spatial_shapes
         ]
         # support_memory = torch.cat(support_memory, dim=1)
