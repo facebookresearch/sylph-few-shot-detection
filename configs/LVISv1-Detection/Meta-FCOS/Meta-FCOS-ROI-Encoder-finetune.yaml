@@ -1,0 +1,96 @@
+_BASE_: "Base-Meta-FCOS.yaml" # ensure the pretraining is the same as previous training
+# Overwrites
+MODEL:
+  # META_ARCHITECTURE: "MetaOneStageDetector"
+  # WEIGHTS: # pretrained weights on base classes
+  BACKBONE:
+    # NAME: "build_fcos_resnet_fpn_backbone"
+    FREEZE: True # freeze backbone
+  # RESNETS:
+  #   OUT_FEATURES: ["res3", "res4", "res5"]
+  #   DEPTH: 50
+  # FPN:
+  #   IN_FEATURES: ["res3", "res4", "res5"]
+  #   NORM: "GN"
+  FCOS:
+    NUM_CLASSES: 1103 #766 # not used in meta-finetuning
+    # POST_NMS_TOPK_TEST: 300
+    # POST_NMS_TOPK_TRAIN: 300
+    # NMS_TH: 0.6 # from 0.6 to 0.5
+    # NUM_CLS_CONVS: 4
+    # THRESH_WITH_CTR: False
+    # CLS_LOGITS_KERNEL_SIZE: 1
+
+  DDP_FIND_UNUSED_PARAMETERS: True
+
+  PROPOSAL_GENERATOR:
+    NAME: "MetaFCOS"
+    # freeze by components
+    FREEZE_CLS_TOWER: True
+    FREEZE_BBOX_BRANCH: True
+
+  META_LEARN:
+    EPISODIC_LEARNING: True
+    CODE_GENERATOR:
+      NAME: "ROIEncoder"
+      ROI_BOX:
+        POOLER_RESOLUTION: 7
+        POOLER_TYPE: "ROIAlignV2"
+      TOKENIZER:
+        NUM_CONV: 2
+        CONV_DIM: 256
+        NORM: "GN"
+        NUM_FC: 2
+        FC_DIM: 256
+      TRANSFORMER_ENCODER:
+        LAYERS: 2
+        HEADS: 8
+        DROPOUT: 0.1
+      HEAD:
+        NUM_FC: 2
+        FC_DIM: 512
+        OUTPUT_DIM: 256
+    CLASS: 3 # define episodics, CLASS is computed from gpu setup
+    SHOT: 5 # training shot
+    EVAL_SHOT: 10
+    QUERY_SHOT: 1
+  # PIXEL_MEAN: [102.9801, 115.9465, 122.7717]
+DATASETS:
+  TRAIN: ("lvis_meta_train_basev1",)
+  TEST: ("lvis_meta_val_novelv1", "lvis_meta_val_basev1",)
+SOLVER:
+  IMS_PER_BATCH: 48 # we use 4 machines, each with 4 gpus, each gpu get 48/16 = 3 classes, 3*4
+  BASE_LR: 0.001  # Note that RetinaNet uses a different default learning rate
+  STEPS: (20000, 26000) # (12000, 20000), (10000, 20000, 25000) # (60000, 80000)
+  MAX_ITER: 30000 #45000 #90000, using 4 machines, seems 45000 overfits
+  REFERENCE_WORLD_SIZE: 0 # do not rescale
+  CHECKPOINT_PERIOD: 5000
+
+  CLIP_GRADIENTS:
+    ENABLED: True
+    CLIP_TYPE: "norm"
+    CLIP_VALUE: 1.0
+# TEST:
+#   EVAL_PERIOD: 5000
+
+# INPUT:
+#   MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+
+DATALOADER:
+  ASPECT_RATIO_GROUPING: False # Does not support grouping now
+  NUM_WORKERS: 8
+# set up data loader
+D2GO_DATA:
+  # AUG_OPS:
+  #   TRAIN: [
+  #     # 'ResizeScaleOp::{"min_scale": 0.1, "max_scale": 2.0, "target_height": 1024, "target_width": 1024}',
+  #     "RandomFlipOp",
+  #     'FixedSizeCropOp::{"crop_size": [1024, 1024]}',
+  #     'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}',
+  #   ]
+  #   TEST: ["ResizeShortestEdgeOp"]
+  MAPPER:
+    BACKFILL_SIZE: False
+    CATCH_EXCEPTION: True
+    NAME: MetalearnDatasetMapper
+    RETRY: 3

@@ -1,0 +1,69 @@
+# Benchmarking TFA baseline, finetune on all classes with novel categories
+
+# Includes different setup:
+# (1) finetune both cls and box head
+# (2) finetune only box head
+
+# in terms of if copy base class codes or not
+
+_BASE_: "Base-Meta-FCOS.yaml"
+MODEL:
+  META_ARCHITECTURE: "MetaOneStageDetector"
+  # WEIGHTS: # pretrained weights on base classes
+
+  DDP_FIND_UNUSED_PARAMETERS: True
+
+  BACKBONE:
+    NAME: "build_fcos_resnet_fpn_backbone"
+    FREEZE: True # freeze backbone
+  FPN:
+    IN_FEATURES: ["res3", "res4", "res5"]
+  PROPOSAL_GENERATOR:
+    NAME: "MetaFCOS"
+    # freeze by components
+    FREEZE_CLS_TOWER: True
+    # bbox tower and branch
+    # FREEZE_BBOX_BRANCH: True
+    FREEZE_BBOX_TOWER: True
+  META_LEARN:
+    EPISODIC_LEARNING: False # pretraining
+  TFA:
+    FINETINE: True # indicates training stage, not used for now, as finetune in coco_pretrain_finetune_all indicates this stage
+    # TRAIN_SHOT: 10 # not necessary
+    USE_PRETRAINED_BASE_CLS_LOGITS: True
+  FCOS:
+    NUM_CLASSES: 1203 #80
+  # PIXEL_MEAN: [102.9801, 115.9465, 122.7717]
+DATASETS:
+  # TRAIN: ("coco_pretrain_train_all",)
+  # TEST: ("coco_pretrain_val_all", ) # "coco_pretrain_val_novel", )
+  TRAIN: ("lvis_pretrain_finetune_all",)
+  TEST: ("lvis_pretrain_val_all", ) # "coco_pretrain_val_novel", )
+  BASE_CLASSES_SPLIT: "lvis_pretrain_val_basefc"
+  NOVEL_CLASSES_SPLIT: "lvis_pretrain_val_novelr"
+TEST:
+  EVAL_PERIOD: 10000
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.001  # 1/10 of the initial learning rate
+  STEPS: (20000, 26000)
+  MAX_ITER: 30000 # decrease the total training epochs
+  REFERENCE_WORLD_SIZE: 8
+  CHECKPOINT_PERIOD: 10000
+
+  # LR_MULTIPLIER_OVERWRITE, [{'backbone': 0.1}, {'reference_points': 0.1, 'sampling_offsets': 0.1}]
+INPUT:
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+D2GO_DATA:
+  AUG_OPS:
+    TRAIN: [
+      'ResizeScaleOp::{"min_scale": 0.1, "max_scale": 2.0, "target_height": 1024, "target_width": 1024}',
+      "RandomFlipOp",
+      'FixedSizeCropOp::{"crop_size": [1024, 1024]}',
+      'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}',
+    ]
+    TEST: ["ResizeShortestEdgeOp"]
+
+# DATALOADER:
+#   SAMPLER_TRAIN: "RepeatFactorTrainingSampler"  # RepeatFactorTrainingSampler
+#   REPEAT_THRESHOLD: 0.001

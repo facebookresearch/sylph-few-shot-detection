@@ -1,0 +1,51 @@
+# Note: REFERENCE_WORLD_SIZE is the number of gpus, IMS_PER_BATCH/REFERENCE_WORLD_SIZE is the images/gpu
+# modify this to your use
+_BASE_: "Base-FCOS.yaml"
+MODEL:
+  META_ARCHITECTURE: "MetaOneStageDetector"
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  DDP_FIND_UNUSED_PARAMETERS: True
+
+  BACKBONE:
+    NAME: "build_fcos_resnet_fpn_backbone"
+    FREEZE: False # freeze backbone
+  FPN:
+    IN_FEATURES: ["res3", "res4", "res5"]
+  PROPOSAL_GENERATOR:
+    NAME: "MetaFCOS"
+  META_LEARN:
+    EPISODIC_LEARNING: False # pretraining
+  FCOS:
+    NUM_CLASSES: 60 #80
+  # PIXEL_MEAN: [102.9801, 115.9465, 122.7717]
+DATASETS:
+  # TRAIN: ("coco_pretrain_train_all",)
+  # TEST: ("coco_pretrain_val_all", ) # "coco_pretrain_val_novel", )
+  TRAIN: ("coco_pretrain_train_base",)
+  TEST: ("coco_pretrain_val_base", ) # "coco_pretrain_val_novel", )
+# TEST:
+#   EVAL_PERIOD: 5000
+SOLVER:
+  IMS_PER_BATCH: 128
+  BASE_LR: 0.01  # Note that RetinaNet uses a different default learning rate
+  STEPS: (60000, 80000)
+  MAX_ITER: 90000
+  REFERENCE_WORLD_SIZE: 64
+  CHECKPOINT_PERIOD: 10000
+
+  # LR_MULTIPLIER_OVERWRITE, [{'backbone': 0.1}, {'reference_points': 0.1, 'sampling_offsets': 0.1}]
+INPUT:
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+D2GO_DATA:
+  AUG_OPS:
+    TRAIN: [
+      'ResizeScaleOp::{"min_scale": 0.1, "max_scale": 2.0, "target_height": 1024, "target_width": 1024}',
+      "RandomFlipOp",
+      'FixedSizeCropOp::{"crop_size": [1024, 1024]}',
+      # 'RandAugmentOp::{"magnitude":9.0, "magnitude_std":0.5, "increasing":1}', # TODO: not supported in OS version
+    ]
+    TEST: ["ResizeShortestEdgeOp"]
+
+# DATALOADER:
+#   SAMPLER_TRAIN: "RepeatFactorTrainingSampler"  # RepeatFactorTrainingSampler
+#   REPEAT_THRESHOLD: 0.001

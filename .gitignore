@@ -1,0 +1,12 @@
+env/
+logs/
+**/output*/
+d2go/
+*.egg-info
+datasets/
+# ignore symbolic links used in d2go structure
+sylph/configs
+sylph/tests
+sylph/tools
+.DS_Store
+**/.DS_Store

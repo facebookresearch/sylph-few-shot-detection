@@ -1,0 +1,8 @@
+torch
+torchvision
+lvis
+
+git+https://github.com/aim-uofa/AdelaiDet.git@master#egg=AdelaiDet
+git+https://github.com/facebookresearch/detectron2.git@main#egg=detectron2
+git+https://github.com/facebookresearch/mobile-vision.git
+git+https://github.com/facebookresearch/d2go.git

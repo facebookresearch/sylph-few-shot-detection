@@ -1,0 +1,41 @@
+MODEL:
+  META_ARCHITECTURE: "MetaOneStageDetector"
+  DDP_FIND_UNUSED_PARAMETERS: True
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  BACKBONE:
+    NAME: "build_fcos_resnet_fpn_backbone"
+    FREEZE: False # freeze backbone
+  RESNETS:
+    OUT_FEATURES: ["res3", "res4", "res5"]
+  FPN:
+    IN_FEATURES: ["res3", "res4", "res5"]
+  PROPOSAL_GENERATOR:
+    NAME: "MetaFCOS"
+    OWD: False
+  META_LEARN:
+    EPISODIC_LEARNING: False # pretraining
+  FCOS:
+    NUM_CLASSES: 60 #80
+    BOX_QUALITY: ["ctrness"]
+  # PIXEL_MEAN: [102.9801, 115.9465, 122.7717]
+DATASETS:
+  # TRAIN: ("coco_pretrain_train_all",)
+  # TEST: ("coco_pretrain_val_all", ) # "coco_pretrain_val_novel", )
+  TRAIN: ("coco_pretrain_train_base",) # 60 categories, novel is 20 Categories
+  TEST: ("coco_pretrain_val_base",) # "coco_pretrain_val_novel", )
+TEST:
+  EVAL_PERIOD: 0
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.01  # Note that RetinaNet uses a different default learning rate
+  STEPS: (60000, 80000)
+  MAX_ITER: 90000 #90000
+  REFERENCE_WORLD_SIZE: 16
+  CHECKPOINT_PERIOD: 10000
+  # LR_MULTIPLIER_OVERWRITE, [{'backbone': 0.1}, {'reference_points': 0.1, 'sampling_offsets': 0.1}]
+INPUT:
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+
+# DATALOADER:
+#   SAMPLER_TRAIN: "RepeatFactorTrainingSampler"  # RepeatFactorTrainingSampler
+#   REPEAT_THRESHOLD: 0.001

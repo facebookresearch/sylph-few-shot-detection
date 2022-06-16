@@ -1,0 +1,9 @@
+_BASE_: "Base-Meta-FCOS-finetune.yaml"
+MODEL:
+  # WEIGHTS: # pretrained weights on base classes
+
+  RESNETS:
+    DEPTH: 50
+# DATALOADER:
+#   SAMPLER_TRAIN: "SupportSetRepeatFactorTrainingSampler"  # RepeatFactorTrainingSampler
+#   REPEAT_THRESHOLD: 0.001
